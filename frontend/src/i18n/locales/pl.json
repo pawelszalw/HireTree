@@ -3,15 +3,46 @@
     "jobs": "Oferty",
     "simulator": "Symulator",
     "learning": "Nauka",
+    "howItWorks": "Jak to działa",
     "login": "Zaloguj się",
     "register": "Rejestracja"
+  },
+  "howItWorks": {
+    "title": "Jak to działa",
+    "subtitle": "Od znalezienia oferty do gotowości na rozmowę — w jednym miejscu.",
+    "steps": [
+      {
+        "title": "Wgraj CV",
+        "description": "HireTree automatycznie wyekstrahuje Twoje umiejętności i doświadczenie. Surowe CV nie jest przechowywane."
+      },
+      {
+        "title": "Zapisz ofertę pracy",
+        "description": "Użyj rozszerzenia do przeglądarki na JustJoinIT lub NoFluffJobs, aby dodać ofertę jednym kliknięciem."
+      },
+      {
+        "title": "Zobacz swój match score",
+        "description": "HireTree porównuje Twoje umiejętności z wymaganiami oferty i pokazuje, czego brakuje."
+      },
+      {
+        "title": "Zasymuluj rozmowę",
+        "description": "Otrzymaj pytania wygenerowane specjalnie pod stack i poziom stanowiska z ogłoszenia. Odpowiedz, dostań feedback, popraw się."
+      },
+      {
+        "title": "Śledź swój pipeline",
+        "description": "Przesuwaj oferty przez etapy: Zapisane → Aplikowałem → Rozmowa → Oferta. Miej kontrolę nad każdą aplikacją."
+      }
+    ],
+    "problemTitle": "Problem, który rozwiązujemy",
+    "problemText": "Portale pracy mówią Ci \"72% dopasowania\" — ale nie mówią, co zrobić z brakującymi 28%. HireTree daje Ci konkretny plan działania: czego się nauczyć, jak się przygotować i kiedy jesteś gotowy.",
+    "ctaButton": "Zacznij teraz"
   },
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Twoje oferty pracy i status procesu rekrutacyjnego.",
     "pipeline": "Pipeline",
     "savedJobs": "Zapisane oferty",
-    "addManually": "+ Dodaj ręcznie"
+    "addManually": "+ Dodaj ręcznie",
+    "empty": "Brak ofert. Dodaj jedną z portalu lub ręcznie."
   },
   "status": {
     "saved": "Zapisane",
@@ -39,5 +70,17 @@
     "title": "Wgraj CV",
     "description": "PDF lub DOCX — skille zostaną wyekstrahowane automatycznie.",
     "button": "Wybierz plik"
+  },
+  "addJobModal": {
+    "title": "Dodaj ofertę pracy",
+    "urlLabel": "URL",
+    "urlPlaceholder": "https://justjoin.it/...",
+    "textLabel": "Treść ogłoszenia",
+    "textPlaceholder": "Wklej tutaj pełną treść ogłoszenia...",
+    "submit": "Dodaj ofertę",
+    "submitting": "Wysyłanie...",
+    "cancel": "Anuluj",
+    "success": "Oferta została dodana.",
+    "error": "Coś poszło nie tak. Czy backend jest uruchomiony?"
   }
 }

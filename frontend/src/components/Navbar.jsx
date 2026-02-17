@@ -1,4 +1,8 @@
+import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+
+const linkClass = ({ isActive }) =>
+  `hover:text-gray-100 transition-colors ${isActive ? 'text-gray-100' : 'text-gray-400'}`
 
 export default function Navbar() {
   const { t, i18n } = useTranslation()
@@ -12,10 +16,11 @@ export default function Navbar() {
         <div className="flex items-center gap-2">
           <span className="text-emerald-400 font-bold text-xl tracking-tight">HireTree</span>
         </div>
-        <nav className="flex items-center gap-6 text-sm text-gray-400">
-          <a href="#" className="hover:text-gray-100 transition-colors">{t('nav.jobs')}</a>
-          <a href="#" className="hover:text-gray-100 transition-colors">{t('nav.simulator')}</a>
-          <a href="#" className="hover:text-gray-100 transition-colors">{t('nav.learning')}</a>
+        <nav className="flex items-center gap-6 text-sm">
+          <NavLink to="/" end className={linkClass}>{t('nav.jobs')}</NavLink>
+          <NavLink to="/how-it-works" className={linkClass}>{t('nav.howItWorks')}</NavLink>
+          <a href="#" className="text-gray-400 hover:text-gray-100 transition-colors">{t('nav.simulator')}</a>
+          <a href="#" className="text-gray-400 hover:text-gray-100 transition-colors">{t('nav.learning')}</a>
         </nav>
         <div className="flex items-center gap-3">
           <button

@@ -3,15 +3,46 @@
     "jobs": "Jobs",
     "simulator": "Simulator",
     "learning": "Learning",
+    "howItWorks": "How it works",
     "login": "Log in",
     "register": "Register"
+  },
+  "howItWorks": {
+    "title": "How it works",
+    "subtitle": "From finding a job offer to being ready for the interview — in one place.",
+    "steps": [
+      {
+        "title": "Upload your CV",
+        "description": "HireTree extracts your skills and experience automatically. Your raw CV is never stored."
+      },
+      {
+        "title": "Save a job offer",
+        "description": "Use the browser extension on JustJoinIT or NoFluffJobs to add an offer with one click."
+      },
+      {
+        "title": "See your match score",
+        "description": "HireTree compares your skills against the offer requirements and shows what you're missing."
+      },
+      {
+        "title": "Simulate the interview",
+        "description": "Get questions generated specifically for the offer's stack and seniority level. Answer, get feedback, improve."
+      },
+      {
+        "title": "Track your pipeline",
+        "description": "Move offers through stages: Saved → Applied → Interview → Offer. Stay on top of every application."
+      }
+    ],
+    "problemTitle": "The problem we solve",
+    "problemText": "Job boards tell you \"72% match\" — but not what to do about the missing 28%. HireTree gives you a concrete action plan: what to learn, how to prepare, and when you're ready.",
+    "ctaButton": "Get started"
   },
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Your job offers and recruitment pipeline status.",
     "pipeline": "Pipeline",
     "savedJobs": "Saved jobs",
-    "addManually": "+ Add manually"
+    "addManually": "+ Add manually",
+    "empty": "No jobs yet. Clip one from a job board or add manually."
   },
   "status": {
     "saved": "Saved",
@@ -39,5 +70,17 @@
     "title": "Upload CV",
     "description": "PDF or DOCX — skills will be extracted automatically.",
     "button": "Choose file"
+  },
+  "addJobModal": {
+    "title": "Add job offer",
+    "urlLabel": "URL",
+    "urlPlaceholder": "https://justjoin.it/...",
+    "textLabel": "Job offer content",
+    "textPlaceholder": "Paste the full job offer text here...",
+    "submit": "Add offer",
+    "submitting": "Sending...",
+    "cancel": "Cancel",
+    "success": "Offer added successfully.",
+    "error": "Something went wrong. Is the backend running?"
   }
 }

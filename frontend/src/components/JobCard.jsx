@@ -10,7 +10,7 @@ const STATUS_STYLES = {
 
 export default function JobCard({ job }) {
   const { t } = useTranslation()
-  const { title, company, stack, salary, mode, matchScore, status } = job
+  const { title, company, stack = [], salary, mode, matchScore, status } = job
 
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 flex flex-col gap-4 hover:border-gray-700 transition-colors">
@@ -41,18 +41,20 @@ export default function JobCard({ job }) {
       </div>
 
       {/* Match score */}
-      <div>
-        <div className="flex justify-between text-xs mb-1">
-          <span className="text-gray-400">{t('jobCard.matchScore')}</span>
-          <span className="text-gray-300 font-medium">{matchScore}%</span>
+      {matchScore != null && (
+        <div>
+          <div className="flex justify-between text-xs mb-1">
+            <span className="text-gray-400">{t('jobCard.matchScore')}</span>
+            <span className="text-gray-300 font-medium">{matchScore}%</span>
+          </div>
+          <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-emerald-500 rounded-full transition-all"
+              style={{ width: `${matchScore}%` }}
+            />
+          </div>
         </div>
-        <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-emerald-500 rounded-full transition-all"
-            style={{ width: `${matchScore}%` }}
-          />
-        </div>
-      </div>
+      )}
 
       {/* Actions */}
       <div className="flex gap-2 pt-1">
