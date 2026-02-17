@@ -4,7 +4,7 @@ import { clipJob } from '../api/clip'
 
 export default function AddJobModal({ onClose }) {
   const { t } = useTranslation()
-  const [url, setText_url]     = useState('')
+  const [url, setUrl]          = useState('')
   const [rawText, setRawText]  = useState('')
   const [status, setStatus]    = useState(null) // null | 'loading' | 'success' | 'error'
   const [error, setError]      = useState('')
@@ -60,7 +60,7 @@ export default function AddJobModal({ onClose }) {
               <input
                 type="url"
                 value={url}
-                onChange={e => setText_url(e.target.value)}
+                onChange={e => setUrl(e.target.value)}
                 placeholder={t('addJobModal.urlPlaceholder')}
                 className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-emerald-500 transition-colors"
               />
