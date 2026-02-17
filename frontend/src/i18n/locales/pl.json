@@ -1,0 +1,43 @@
+{
+  "nav": {
+    "jobs": "Oferty",
+    "simulator": "Symulator",
+    "learning": "Nauka",
+    "login": "Zaloguj się",
+    "register": "Rejestracja"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Twoje oferty pracy i status procesu rekrutacyjnego.",
+    "pipeline": "Pipeline",
+    "savedJobs": "Zapisane oferty",
+    "addManually": "+ Dodaj ręcznie"
+  },
+  "status": {
+    "saved": "Zapisane",
+    "applied": "Aplikowałem",
+    "interview": "Rozmowa umówiona",
+    "offer": "Oferta",
+    "rejected": "Odrzucony"
+  },
+  "jobCard": {
+    "matchScore": "Match score",
+    "gapAnalysis": "Gap analysis",
+    "simulateInterview": "Symuluj rozmowę"
+  },
+  "interviewSimulator": {
+    "title": "Symulator rozmowy",
+    "description": "Wybierz ofertę, aby rozpocząć sesję pytań rekrutacyjnych.",
+    "button": "Wybierz ofertę"
+  },
+  "learningSimulator": {
+    "title": "Symulator nauki",
+    "description": "Uzupełnij luki z gap analysis poprzez sesje pytań dla technologii.",
+    "button": "Wczytaj CV najpierw"
+  },
+  "cvUpload": {
+    "title": "Wgraj CV",
+    "description": "PDF lub DOCX — skille zostaną wyekstrahowane automatycznie.",
+    "button": "Wybierz plik"
+  }
+}

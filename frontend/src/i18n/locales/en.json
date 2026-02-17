@@ -1,0 +1,43 @@
+{
+  "nav": {
+    "jobs": "Jobs",
+    "simulator": "Simulator",
+    "learning": "Learning",
+    "login": "Log in",
+    "register": "Register"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Your job offers and recruitment pipeline status.",
+    "pipeline": "Pipeline",
+    "savedJobs": "Saved jobs",
+    "addManually": "+ Add manually"
+  },
+  "status": {
+    "saved": "Saved",
+    "applied": "Applied",
+    "interview": "Interview scheduled",
+    "offer": "Offer",
+    "rejected": "Rejected"
+  },
+  "jobCard": {
+    "matchScore": "Match score",
+    "gapAnalysis": "Gap analysis",
+    "simulateInterview": "Simulate interview"
+  },
+  "interviewSimulator": {
+    "title": "Interview Simulator",
+    "description": "Select a job offer to start a recruitment Q&A session.",
+    "button": "Select an offer"
+  },
+  "learningSimulator": {
+    "title": "Learning Simulator",
+    "description": "Fill gaps from the gap analysis with technology-specific Q&A sessions.",
+    "button": "Upload CV first"
+  },
+  "cvUpload": {
+    "title": "Upload CV",
+    "description": "PDF or DOCX — skills will be extracted automatically.",
+    "button": "Choose file"
+  }
+}
