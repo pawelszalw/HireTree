@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import JobCard from '../components/JobCard'
 import AddJobModal from '../components/AddJobModal'
+import CVUploadSection from '../components/CVUploadSection'
 import { fetchJobs } from '../api/clip'
 
 const PIPELINE_STAGES = ['saved', 'applied', 'interview', 'offer', 'rejected']
@@ -108,17 +109,8 @@ export default function Dashboard() {
 
       </div>
 
-      {/* CV / Skills placeholder */}
-      <section className="bg-gray-900 border border-dashed border-gray-700 rounded-xl p-8 flex flex-col items-center gap-3 text-center">
-        <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xl">📄</div>
-        <div>
-          <p className="font-medium text-gray-300">{t('cvUpload.title')}</p>
-          <p className="text-xs text-gray-600 mt-1">{t('cvUpload.description')}</p>
-        </div>
-        <button className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-lg transition-colors">
-          {t('cvUpload.button')}
-        </button>
-      </section>
+      {/* CV / Skills profile */}
+      <CVUploadSection />
 
     </div>
   )

@@ -67,9 +67,40 @@
     "button": "Wczytaj CV najpierw"
   },
   "cvUpload": {
-    "title": "Wgraj CV",
-    "description": "PDF lub DOCX — skille zostaną wyekstrahowane automatycznie.",
-    "button": "Wybierz plik"
+    "title": "Twój profil umiejętności",
+    "description": "Wgraj PDF lub DOCX — skille zostaną wyekstrahowane automatycznie. Surowe CV nie jest przechowywane.",
+    "button": "Wybierz plik",
+    "uploading": "Analizuję...",
+    "replace": "Zastąp CV",
+    "orManual": "lub zbuduj profil ręcznie",
+    "cached": "Profil jest aktualny (brak zmian)",
+    "years_one": "{{count}} rok doświadczenia",
+    "years_few": "{{count}} lata doświadczenia",
+    "years_many": "{{count}} lat doświadczenia",
+    "years_other": "{{count}} lat doświadczenia"
+  },
+  "skillProfile": {
+    "current": "Aktualnie",
+    "recentLabel": "1-2 lata temu",
+    "outdatedLabel": "3+ lata temu",
+    "aiEstimate": "Ocena AI",
+    "manualOverride": "Twoja ocena",
+    "addNote": "Dodaj notatkę...",
+    "refineTitle": "Doprecyzuj profil historią pracy",
+    "refineDescription": "Dodaj kontekst o swoim doświadczeniu, aby poprawić wykrywanie umiejętności. Dostępne raz.",
+    "refineSubmit": "Doprecyzuj profil",
+    "refineUsed": "Profil już doprecyzowany"
+  },
+  "workHistory": {
+    "title": "Zbuduj profil z historii pracy",
+    "addPosition": "+ Dodaj kolejne stanowisko",
+    "company": "Firma",
+    "role": "Stanowisko / rola",
+    "period": "Okres (np. 2021–2023)",
+    "description": "Co robiłeś",
+    "technologies": "Używane technologie (oddzielone przecinkiem)",
+    "submit": "Zbuduj profil",
+    "submitting": "Analizuję..."
   },
   "addJobModal": {
     "title": "Dodaj ofertę pracy",

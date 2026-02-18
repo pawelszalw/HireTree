@@ -67,9 +67,38 @@
     "button": "Upload CV first"
   },
   "cvUpload": {
-    "title": "Upload CV",
-    "description": "PDF or DOCX — skills will be extracted automatically.",
-    "button": "Choose file"
+    "title": "Your Skills Profile",
+    "description": "Upload a PDF or DOCX — skills are extracted automatically. Your raw CV is never stored.",
+    "button": "Choose file",
+    "uploading": "Analysing...",
+    "replace": "Replace CV",
+    "orManual": "or build profile manually",
+    "cached": "Profile is up to date (no changes detected)",
+    "years_one": "{{count}} year of experience",
+    "years_other": "{{count}} years of experience"
+  },
+  "skillProfile": {
+    "current": "Current",
+    "recentLabel": "1-2 years ago",
+    "outdatedLabel": "3+ years ago",
+    "aiEstimate": "AI estimate",
+    "manualOverride": "Your rating",
+    "addNote": "Add note...",
+    "refineTitle": "Refine profile with work history",
+    "refineDescription": "Add context about your experience to improve skill detection. Available once.",
+    "refineSubmit": "Refine profile",
+    "refineUsed": "Profile already refined"
+  },
+  "workHistory": {
+    "title": "Build profile from work history",
+    "addPosition": "+ Add another position",
+    "company": "Company",
+    "role": "Role / title",
+    "period": "Period (e.g. 2021–2023)",
+    "description": "What you did",
+    "technologies": "Technologies used (comma-separated)",
+    "submit": "Build profile",
+    "submitting": "Analysing..."
   },
   "addJobModal": {
     "title": "Add job offer",

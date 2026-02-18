@@ -5,3 +5,6 @@ anthropic
 openai
 google-generativeai
 pydantic
+python-multipart
+pymupdf
+python-docx
