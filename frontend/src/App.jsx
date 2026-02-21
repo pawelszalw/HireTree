@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import Navbar from './components/Navbar'
+import Footer from './components/Footer'
 import ProtectedRoute from './components/ProtectedRoute'
 import Dashboard from './pages/Dashboard'
 import Pipeline from './pages/Pipeline'
@@ -16,9 +17,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <div className="min-h-screen bg-gray-950 text-gray-100">
+        <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col">
           <Navbar />
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
@@ -31,6 +32,7 @@ export default function App() {
               <Route path="/jobs/:id" element={<ProtectedRoute><JobDetail /></ProtectedRoute>} />
             </Routes>
           </main>
+          <Footer />
         </div>
       </AuthProvider>
     </BrowserRouter>
