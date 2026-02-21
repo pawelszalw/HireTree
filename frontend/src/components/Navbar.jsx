@@ -46,7 +46,7 @@ export default function Navbar() {
         {/* Left nav — authenticated links */}
         {user && (
           <nav className="flex items-center gap-5 text-sm">
-            <NavLink to="/" end className={linkClass}>{t('nav.jobs')}</NavLink>
+            <NavLink to="/jobs" className={linkClass}>{t('nav.jobs')}</NavLink>
             <NavLink to="/pipeline" className={linkClass}>{t('nav.pipeline')}</NavLink>
             <NavLink to="/simulator" className={linkClass}>{t('nav.simulator')}</NavLink>
             <NavLink to="/learning" className={linkClass}>{t('nav.learning')}</NavLink>

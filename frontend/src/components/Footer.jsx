@@ -22,7 +22,7 @@ export default function Footer() {
         <nav className="flex items-center gap-5 text-sm">
           {user && (
             <>
-              <NavLink to="/" end className="text-gray-500 hover:text-gray-300 transition-colors">
+              <NavLink to="/jobs" className="text-gray-500 hover:text-gray-300 transition-colors">
                 {t('nav.jobs')}
               </NavLink>
               <NavLink to="/pipeline" className="text-gray-500 hover:text-gray-300 transition-colors">

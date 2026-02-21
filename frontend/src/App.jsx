@@ -4,6 +4,7 @@ import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ProtectedRoute from './components/ProtectedRoute'
 import Dashboard from './pages/Dashboard'
+import Jobs from './pages/Jobs'
 import Pipeline from './pages/Pipeline'
 import Profile from './pages/Profile'
 import HowItWorks from './pages/HowItWorks'
@@ -25,6 +26,7 @@ export default function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/jobs" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
               <Route path="/pipeline" element={<ProtectedRoute><Pipeline /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/simulator" element={<ProtectedRoute><Simulator /></ProtectedRoute>} />

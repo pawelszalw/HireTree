@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timezone
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Cookie, Response
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Cookie, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from dotenv import load_dotenv
@@ -20,7 +20,7 @@ app = FastAPI(title="HireTree API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origin_regex=r"http://localhost:(5173|8000)|chrome-extension://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -50,10 +50,21 @@ provider = load_provider()
 # Auth dependency
 # ---------------------------------------------------------------------------
 
-async def get_current_user(access_token: str | None = Cookie(default=None)) -> dict:
-    if not access_token:
+async def get_current_user(
+    request: Request,
+    access_token: str | None = Cookie(default=None),
+) -> dict:
+    token = access_token
+
+    # Fallback: Authorization: Bearer <token> (used by browser extension)
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+
+    if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    user_id = decode_access_token(access_token)
+    user_id = decode_access_token(token)
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     user = user_store.find_by_id(user_id)
