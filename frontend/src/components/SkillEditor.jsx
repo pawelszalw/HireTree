@@ -14,7 +14,7 @@ const RECENCY_LABELS = {
   '3+ years ago':   'skillProfile.outdatedLabel',
 }
 
-export default function SkillEditor({ skill: initialSkill, onUpdate }) {
+export default function SkillEditor({ skill: initialSkill, onUpdate, onSave }) {
   const { t } = useTranslation()
   const [skill, setSkill] = useState(initialSkill)
   const [noteOpen, setNoteOpen] = useState(!!initialSkill.note)
@@ -24,15 +24,16 @@ export default function SkillEditor({ skill: initialSkill, onUpdate }) {
   const aiRating = skill.ai_confidence ?? 3
   const effectiveRating = displayRating ?? aiRating
 
+  const save = onSave ?? updateSkill
+
   const handleStarClick = async (star) => {
     const newRating = star === skill.user_rating ? null : star
     const updated = { ...skill, user_rating: newRating }
     setSkill(updated)
     onUpdate?.(updated)
     try {
-      await updateSkill(skill.name, { user_rating: newRating })
+      await save(skill.name, { user_rating: newRating })
     } catch {
-      // revert on failure
       setSkill(skill)
       onUpdate?.(skill)
     }
@@ -44,7 +45,7 @@ export default function SkillEditor({ skill: initialSkill, onUpdate }) {
     setSkill(updated)
     onUpdate?.(updated)
     try {
-      await updateSkill(skill.name, { note: noteDraft })
+      await save(skill.name, { note: noteDraft })
     } catch {
       setSkill(skill)
       onUpdate?.(skill)

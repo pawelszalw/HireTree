@@ -2,6 +2,8 @@
   "nav": {
     "jobs": "Overview",
     "pipeline": "Pipeline",
+    "profile": "Profile",
+    "logout": "Log out",
     "simulator": "Simulator",
     "learning": "Learning",
     "howItWorks": "How it works",
@@ -119,7 +121,29 @@
   "resumeBanner": {
     "title": "No CV uploaded",
     "description": "Upload your CV to unlock match scores and gap analysis.",
-    "button": "Upload CV"
+    "button": "Go to Profile"
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Manage your resumes and skills.",
+    "resumesTitle": "Your Resumes",
+    "addResume": "+ Add Resume",
+    "noResumes": "No resumes yet. Add one to get started.",
+    "skills": "skills",
+    "setActive": "Set active",
+    "active": "Active",
+    "delete": "Delete",
+    "clickToRename": "Click to rename"
+  },
+  "addResumeModal": {
+    "title": "Add Resume",
+    "nameLabel": "Resume name",
+    "namePlaceholder": "e.g. Frontend focused",
+    "upload": "Upload CV",
+    "manual": "Build manually",
+    "uploadCV": "Choose file",
+    "submit": "Add",
+    "submitting": "Adding..."
   },
   "addJobModal": {
     "title": "Add job offer",

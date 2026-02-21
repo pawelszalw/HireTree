@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import JobCard from '../components/JobCard'
 import AddJobModal from '../components/AddJobModal'
-import CVUploadSection from '../components/CVUploadSection'
 import ResumeBanner from '../components/ResumeBanner'
 import { fetchJobs, fetchCV } from '../api/clip'
 
@@ -13,7 +13,7 @@ export default function Dashboard() {
   const [showModal, setShowModal] = useState(false)
   const [jobs, setJobs] = useState([])
   const [hasCV, setHasCV] = useState(null) // null=loading, false=missing, true=present
-  const cvSectionRef = useRef(null)
+  const navigate = useNavigate()
 
   const loadJobs = () => {
     fetchJobs()
@@ -42,9 +42,7 @@ export default function Dashboard() {
 
       {/* Resume banner */}
       {hasCV === false && (
-        <ResumeBanner
-          onUploadClick={() => cvSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
-        />
+        <ResumeBanner onUploadClick={() => navigate('/profile')} />
       )}
 
       {/* Page title */}
@@ -122,10 +120,6 @@ export default function Dashboard() {
 
       </div>
 
-      {/* CV / Skills profile */}
-      <div ref={cvSectionRef}>
-        <CVUploadSection onCVLoaded={() => setHasCV(true)} />
-      </div>
 
     </div>
   )

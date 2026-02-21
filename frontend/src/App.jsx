@@ -3,6 +3,7 @@ import Navbar from './components/Navbar'
 import Dashboard from './pages/Dashboard'
 import HowItWorks from './pages/HowItWorks'
 import Pipeline from './pages/Pipeline'
+import Profile from './pages/Profile'
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/pipeline" element={<Pipeline />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
           </Routes>
         </main>

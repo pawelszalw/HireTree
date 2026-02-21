@@ -2,6 +2,8 @@
   "nav": {
     "jobs": "Przegląd",
     "pipeline": "Pipeline",
+    "profile": "Profil",
+    "logout": "Wyloguj się",
     "simulator": "Symulator",
     "learning": "Nauka",
     "howItWorks": "Jak to działa",
@@ -121,7 +123,29 @@
   "resumeBanner": {
     "title": "Brak CV",
     "description": "Wgraj CV, aby odblokować match score i gap analysis.",
-    "button": "Wgraj CV"
+    "button": "Przejdź do profilu"
+  },
+  "profile": {
+    "title": "Profil",
+    "subtitle": "Zarządzaj swoimi CV i umiejętnościami.",
+    "resumesTitle": "Twoje CV",
+    "addResume": "+ Dodaj CV",
+    "noResumes": "Brak CV. Dodaj pierwsze, aby zacząć.",
+    "skills": "umiejętności",
+    "setActive": "Ustaw aktywne",
+    "active": "Aktywne",
+    "delete": "Usuń",
+    "clickToRename": "Kliknij, aby zmienić nazwę"
+  },
+  "addResumeModal": {
+    "title": "Dodaj CV",
+    "nameLabel": "Nazwa CV",
+    "namePlaceholder": "np. Frontend focused",
+    "upload": "Wgraj plik",
+    "manual": "Zbuduj ręcznie",
+    "uploadCV": "Wybierz plik",
+    "submit": "Dodaj",
+    "submitting": "Dodawanie..."
   },
   "addJobModal": {
     "title": "Dodaj ofertę pracy",
