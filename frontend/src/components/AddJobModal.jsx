@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { clipJob } from '../api/clip'
 
 export default function AddJobModal({ onClose }) {
   const { t } = useTranslation()
-  const [url, setUrl]          = useState('')
-  const [rawText, setRawText]  = useState('')
-  const [status, setStatus]    = useState(null) // null | 'loading' | 'success' | 'error'
-  const [error, setError]      = useState('')
+  const navigate = useNavigate()
+  const [url, setUrl]         = useState('')
+  const [rawText, setRawText] = useState('')
+  const [status, setStatus]   = useState(null) // null | 'loading' | 'success' | 'duplicate' | 'error'
+  const [duplicateId, setDuplicateId] = useState(null)
+  const [error, setError]     = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -15,9 +18,14 @@ export default function AddJobModal({ onClose }) {
     setError('')
 
     try {
-      await clipJob({ url, raw_text: rawText })
-      setStatus('success')
-      setTimeout(() => onClose(true), 1000)
+      const result = await clipJob({ url, raw_text: rawText })
+      if (result.duplicate) {
+        setDuplicateId(result.id)
+        setStatus('duplicate')
+      } else {
+        setStatus('success')
+        setTimeout(() => onClose(true), 1000)
+      }
     } catch (err) {
       setError(err.message)
       setStatus('error')
@@ -41,18 +49,35 @@ export default function AddJobModal({ onClose }) {
           </button>
         </div>
 
-        {status === 'success' ? (
+        {status === 'success' && (
           <div className="flex flex-col items-center gap-4 py-4 text-center">
             <span className="text-3xl">✓</span>
             <p className="text-emerald-400 text-sm">{t('addJobModal.success')}</p>
-            <button
-              onClick={onClose}
-              className="text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 px-5 py-2 rounded-lg transition-colors"
-            >
-              {t('addJobModal.cancel')}
-            </button>
           </div>
-        ) : (
+        )}
+
+        {status === 'duplicate' && (
+          <div className="flex flex-col items-center gap-4 py-4 text-center">
+            <span className="text-3xl">📌</span>
+            <p className="text-yellow-400 text-sm">{t('addJobModal.duplicate')}</p>
+            <div className="flex gap-2">
+              <button
+                onClick={onClose}
+                className="text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-lg transition-colors"
+              >
+                {t('addJobModal.cancel')}
+              </button>
+              <button
+                onClick={() => { onClose(); navigate(`/jobs/${duplicateId}`) }}
+                className="text-sm bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                {t('addJobModal.viewExisting')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {status !== 'success' && status !== 'duplicate' && (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
             <div className="flex flex-col gap-1.5">
@@ -79,7 +104,7 @@ export default function AddJobModal({ onClose }) {
             </div>
 
             {status === 'error' && (
-              <p className="text-xs text-red-400">{t('addJobModal.error')}</p>
+              <p className="text-xs text-red-400">{error || t('addJobModal.error')}</p>
             )}
 
             <div className="flex gap-2 pt-1">

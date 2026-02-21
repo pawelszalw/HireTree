@@ -44,6 +44,14 @@ export function mockApiPlugin() {
         try {
           const payload = await readBody(req)
 
+          if (payload.url) {
+            const existing = jobs.find(j => j.url === payload.url)
+            if (existing) {
+              console.log(`[mock-api] duplicate url — existing id: ${existing.id}`)
+              return json(res, { received: true, duplicate: true, id: existing.id })
+            }
+          }
+
           const job = {
             id:          Date.now(),
             url:         payload.url ?? '',

@@ -258,6 +258,13 @@ async def clip(payload: ClipPayload, current_user: dict = Depends(get_current_us
         }
 
     jobs = load_jobs(current_user["id"])
+
+    if payload.url:
+        existing = next((j for j in jobs if j.get("url") == payload.url), None)
+        if existing:
+            print(f"[clip] duplicate url — existing id: {existing['id']}")
+            return {"received": True, "duplicate": True, "id": existing["id"]}
+
     job = {
         "id": max((j["id"] for j in jobs), default=0) + 1,
         "url": payload.url,

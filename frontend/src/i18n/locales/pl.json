@@ -197,6 +197,8 @@
     "submitting": "Wysyłanie...",
     "cancel": "Anuluj",
     "success": "Oferta została dodana.",
+    "duplicate": "Ta oferta pracy jest już na Twojej liście.",
+    "viewExisting": "Zobacz zapisaną ofertę",
     "error": "Coś poszło nie tak. Czy backend jest uruchomiony?"
   }
 }
