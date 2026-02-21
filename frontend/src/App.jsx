@@ -6,6 +6,9 @@ import Dashboard from './pages/Dashboard'
 import Pipeline from './pages/Pipeline'
 import Profile from './pages/Profile'
 import HowItWorks from './pages/HowItWorks'
+import Simulator from './pages/Simulator'
+import Learning from './pages/Learning'
+import JobDetail from './pages/JobDetail'
 import Login from './pages/Login'
 import Register from './pages/Register'
 
@@ -23,6 +26,9 @@ export default function App() {
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/pipeline" element={<ProtectedRoute><Pipeline /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/simulator" element={<ProtectedRoute><Simulator /></ProtectedRoute>} />
+              <Route path="/learning" element={<ProtectedRoute><Learning /></ProtectedRoute>} />
+              <Route path="/jobs/:id" element={<ProtectedRoute><JobDetail /></ProtectedRoute>} />
             </Routes>
           </main>
         </div>

@@ -182,6 +182,19 @@ VALID_STATUSES = {
 }
 
 
+def _compute_match(job_stack: list, resume_skills: list) -> dict:
+    if not job_stack:
+        return {"match_score": None, "matched": [], "missing": []}
+    resume_names = {s["name"].lower() for s in resume_skills}
+    matched = [t for t in job_stack if t.lower() in resume_names]
+    missing = [t for t in job_stack if t.lower() not in resume_names]
+    return {
+        "match_score": round(len(matched) / len(job_stack) * 100),
+        "matched": matched,
+        "missing": missing,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Auth endpoints
 # ---------------------------------------------------------------------------
@@ -260,7 +273,26 @@ async def clip(payload: ClipPayload, current_user: dict = Depends(get_current_us
 
 @app.get("/api/jobs")
 async def get_jobs(current_user: dict = Depends(get_current_user)):
-    return load_jobs(current_user["id"])
+    jobs = load_jobs(current_user["id"])
+    resumes = load_resumes(current_user["id"])
+    active = _active_resume(resumes)
+    resume_skills = active.get("skills", []) if active else []
+    return [
+        {**job, **_compute_match(job.get("stack", []), resume_skills)}
+        for job in jobs
+    ]
+
+
+@app.get("/api/jobs/{job_id}")
+async def get_job(job_id: int, current_user: dict = Depends(get_current_user)):
+    jobs = load_jobs(current_user["id"])
+    job = next((j for j in jobs if j["id"] == job_id), None)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    resumes = load_resumes(current_user["id"])
+    active = _active_resume(resumes)
+    resume_skills = active.get("skills", []) if active else []
+    return {**job, **_compute_match(job.get("stack", []), resume_skills)}
 
 
 @app.patch("/api/jobs/{job_id}")

@@ -45,12 +45,20 @@ export function mockApiPlugin() {
           const payload = await readBody(req)
 
           const job = {
-            id:        Date.now(),
-            url:       payload.url ?? '',
-            raw_text:  payload.raw_text ?? '',
-            title:     payload.url ?? 'Untitled',
-            status:    'saved',
-            clippedAt: new Date().toISOString(),
+            id:          Date.now(),
+            url:         payload.url ?? '',
+            raw_text:    payload.raw_text ?? '',
+            title:       payload.url ?? 'Untitled',
+            company:     '',
+            stack:       [],
+            salary:      '',
+            mode:        '',
+            seniority:   '',
+            status:      'saved',
+            clippedAt:   new Date().toISOString(),
+            match_score: null,
+            matched:     [],
+            missing:     [],
           }
 
           jobs.push(job)
@@ -77,6 +85,8 @@ export function mockApiPlugin() {
         const id = parseInt(idMatch[1])
         const job = jobs.find(j => j.id === id)
         if (!job) return json(res, { error: 'Not found' }, 404)
+
+        if (req.method === 'GET') return json(res, job)
 
         if (req.method === 'PATCH') {
           try {

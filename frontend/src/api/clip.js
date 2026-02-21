@@ -21,6 +21,10 @@ export async function fetchJobs() {
   return handleResponse(await fetch(`${API_URL}/api/jobs`, CREDS))
 }
 
+export async function fetchJob(id) {
+  return handleResponse(await fetch(`${API_URL}/api/jobs/${id}`, CREDS))
+}
+
 export async function updateJobStatus(id, status) {
   return handleResponse(await fetch(`${API_URL}/api/jobs/${id}`, {
     method: 'PATCH', ...JSON_CREDS,

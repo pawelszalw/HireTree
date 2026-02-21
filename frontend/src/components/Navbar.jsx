@@ -47,8 +47,8 @@ export default function Navbar() {
             </>
           )}
           <NavLink to="/how-it-works" className={linkClass}>{t('nav.howItWorks')}</NavLink>
-          <a href="#" className="text-gray-400 hover:text-gray-100 transition-colors">{t('nav.simulator')}</a>
-          <a href="#" className="text-gray-400 hover:text-gray-100 transition-colors">{t('nav.learning')}</a>
+          <NavLink to="/simulator" className={linkClass}>{t('nav.simulator')}</NavLink>
+          <NavLink to="/learning" className={linkClass}>{t('nav.learning')}</NavLink>
         </nav>
 
         <div className="flex items-center gap-3">

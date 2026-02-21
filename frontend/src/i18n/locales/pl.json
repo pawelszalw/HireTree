@@ -76,6 +76,10 @@
   "jobCard": {
     "matchScore": "Match score",
     "gapAnalysis": "Gap analysis",
+    "hideGaps": "Ukryj luki",
+    "matched": "Dopasowane",
+    "missing": "Brakujące",
+    "noStack": "Brak informacji o stacku",
     "simulateInterview": "Symuluj rozmowę"
   },
   "interviewSimulator": {
@@ -162,6 +166,26 @@
     "uploadCV": "Wybierz plik",
     "submit": "Dodaj",
     "submitting": "Dodawanie..."
+  },
+  "jobDetail": {
+    "back": "← Wróć",
+    "notFound": "Nie znaleziono oferty.",
+    "stack": "Stack technologiczny",
+    "matchScore": "Match Score",
+    "matched": "Masz",
+    "missing": "Brakuje Ci",
+    "noResume": "Wgraj CV, aby zobaczyć match score.",
+    "noStack": "Brak stacku w tej ofercie.",
+    "description": "Opis",
+    "location": "Lokalizacja",
+    "seniority": "Poziom",
+    "contract": "Umowa",
+    "salary": "Wynagrodzenie",
+    "mode": "Tryb pracy",
+    "savedOn": "Zapisano",
+    "viewOriginal": "Zobacz oryginalne ogłoszenie",
+    "simulate": "Symuluj rozmowę",
+    "changeStatus": "Zmień status"
   },
   "addJobModal": {
     "title": "Dodaj ofertę pracy",

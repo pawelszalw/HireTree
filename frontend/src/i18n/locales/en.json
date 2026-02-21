@@ -76,6 +76,10 @@
   "jobCard": {
     "matchScore": "Match score",
     "gapAnalysis": "Gap analysis",
+    "hideGaps": "Hide gaps",
+    "matched": "Matched",
+    "missing": "Missing",
+    "noStack": "No stack info extracted yet",
     "simulateInterview": "Simulate interview"
   },
   "interviewSimulator": {
@@ -160,6 +164,26 @@
     "uploadCV": "Choose file",
     "submit": "Add",
     "submitting": "Adding..."
+  },
+  "jobDetail": {
+    "back": "← Back",
+    "notFound": "Job not found.",
+    "stack": "Tech Stack",
+    "matchScore": "Match Score",
+    "matched": "You have",
+    "missing": "You're missing",
+    "noResume": "Upload a CV to see your match score.",
+    "noStack": "No stack extracted from this offer.",
+    "description": "Description",
+    "location": "Location",
+    "seniority": "Seniority",
+    "contract": "Contract",
+    "salary": "Salary",
+    "mode": "Mode",
+    "savedOn": "Saved on",
+    "viewOriginal": "View original offer",
+    "simulate": "Simulate interview",
+    "changeStatus": "Change status"
   },
   "addJobModal": {
     "title": "Add job offer",
