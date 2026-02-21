@@ -8,3 +8,5 @@ pydantic
 python-multipart
 pymupdf
 python-docx
+passlib[bcrypt]
+python-jose[cryptography]

@@ -25,7 +25,17 @@ export function mockApiPlugin() {
   return {
     name: 'mock-api',
     configureServer(server) {
-      console.log('[mock-api] ready — POST /api/clip  GET /api/jobs')
+      console.log('[mock-api] ready — POST /api/clip  GET /api/jobs  GET /api/auth/me')
+
+      // Auth endpoints — auto-login as dev user in mock mode
+      server.middlewares.use('/api/auth', async (req, res) => {
+        const mockUser = { id: 'mock-user', email: 'dev@hiretree.io', created_at: new Date().toISOString() }
+        if (req.url === '/me')       return json(res, mockUser)
+        if (req.url === '/login')    return json(res, mockUser)
+        if (req.url === '/register') return json(res, mockUser)
+        if (req.url === '/logout')   return json(res, { success: true })
+        json(res, { error: 'Not found' }, 404)
+      })
 
       // POST /api/clip — receive a clipped job offer
       server.middlewares.use('/api/clip', async (req, res) => {

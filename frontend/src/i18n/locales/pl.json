@@ -10,6 +10,22 @@
     "login": "Zaloguj się",
     "register": "Rejestracja"
   },
+  "auth": {
+    "email": "Email",
+    "password": "Hasło",
+    "confirmPassword": "Potwierdź hasło",
+    "login": "Zaloguj się",
+    "loggingIn": "Logowanie...",
+    "loginSubtitle": "Zaloguj się do swojego konta HireTree.",
+    "register": "Zarejestruj się",
+    "registering": "Tworzenie konta...",
+    "registerSubtitle": "Utwórz swoje konto HireTree.",
+    "createAccount": "Utwórz konto",
+    "noAccount": "Nie masz konta?",
+    "hasAccount": "Masz już konto?",
+    "passwordMismatch": "Hasła nie są identyczne.",
+    "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków."
+  },
   "howItWorks": {
     "title": "Jak to działa",
     "subtitle": "Od znalezienia oferty do gotowości na rozmowę — w jednym miejscu.",

@@ -10,6 +10,22 @@
     "login": "Log in",
     "register": "Register"
   },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "login": "Log in",
+    "loggingIn": "Logging in...",
+    "loginSubtitle": "Sign in to your HireTree account.",
+    "register": "Register",
+    "registering": "Creating account...",
+    "registerSubtitle": "Create your HireTree account.",
+    "createAccount": "Create account",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "passwordMismatch": "Passwords do not match.",
+    "passwordTooShort": "Password must be at least 8 characters."
+  },
   "howItWorks": {
     "title": "How it works",
     "subtitle": "From finding a job offer to being ready for the interview — in one place.",

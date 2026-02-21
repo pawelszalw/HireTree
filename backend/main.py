@@ -1,8 +1,8 @@
 import os
 from datetime import datetime, timezone
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Cookie, Response
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,16 +12,22 @@ from providers.openai import OpenAIProvider
 from providers.gemini import GeminiProvider
 from providers.base import BaseProvider
 from cv_parser import extract_text, anonymize, fingerprint
-from profile_utils import skills_to_compact, load_resumes, save_resumes
+from profile_utils import skills_to_compact, load_resumes, save_resumes, load_jobs, save_jobs
+from auth import hash_password, verify_password, create_access_token, decode_access_token
+import user_store
 
 app = FastAPI(title="HireTree API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "chrome-extension://*"],
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+COOKIE_NAME = "access_token"
+COOKIE_MAX_AGE = 7 * 24 * 60 * 60  # 7 days
 
 
 def load_provider() -> BaseProvider:
@@ -39,9 +45,21 @@ def load_provider() -> BaseProvider:
 
 provider = load_provider()
 
-# In-memory stores
-jobs: list[dict] = []
-resumes: list[dict] = load_resumes()
+
+# ---------------------------------------------------------------------------
+# Auth dependency
+# ---------------------------------------------------------------------------
+
+async def get_current_user(access_token: str | None = Cookie(default=None)) -> dict:
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    user_id = decode_access_token(access_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    user = user_store.find_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
 
 
 # ---------------------------------------------------------------------------
@@ -60,12 +78,12 @@ def _skill_defaults(skill: dict) -> dict:
     }
 
 
-def _active_resume() -> dict | None:
+def _active_resume(resumes: list) -> dict | None:
     active = next((r for r in resumes if r.get("is_active")), None)
     return active or (resumes[0] if resumes else None)
 
 
-def _parsed_to_resume(parsed: dict, name: str, source: str, hash_value: str = "") -> dict:
+def _parsed_to_resume(parsed: dict, resumes: list, name: str, source: str, hash_value: str = "") -> dict:
     skills = [_skill_defaults(s) for s in parsed.get("skills", [])]
     new_id = max((r["id"] for r in resumes), default=0) + 1
     return {
@@ -97,9 +115,26 @@ def _entries_to_text(entries) -> str:
     return "\n\n".join(parts)
 
 
+def _set_auth_cookie(response: Response, user_id: str) -> None:
+    token = create_access_token(user_id)
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=False,       # set True in production (requires HTTPS)
+        samesite="lax",
+        max_age=COOKIE_MAX_AGE,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
+
+class AuthPayload(BaseModel):
+    email: EmailStr
+    password: str
+
 
 class ClipPayload(BaseModel):
     url: str = ""
@@ -148,11 +183,53 @@ VALID_STATUSES = {
 
 
 # ---------------------------------------------------------------------------
+# Auth endpoints
+# ---------------------------------------------------------------------------
+
+@app.post("/api/auth/register", status_code=201)
+async def register(payload: AuthPayload, response: Response):
+    if user_store.find_by_email(payload.email):
+        raise HTTPException(status_code=409, detail="Email already registered")
+    if len(payload.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+
+    user = user_store.create_user(
+        email=payload.email,
+        password_hash=hash_password(payload.password),
+    )
+    _set_auth_cookie(response, user["id"])
+    print(f"[auth] registered: {user['email']}")
+    return user_store.public(user)
+
+
+@app.post("/api/auth/login")
+async def login(payload: AuthPayload, response: Response):
+    user = user_store.find_by_email(payload.email)
+    if not user or not verify_password(payload.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    _set_auth_cookie(response, user["id"])
+    print(f"[auth] login: {user['email']}")
+    return user_store.public(user)
+
+
+@app.post("/api/auth/logout")
+async def logout(response: Response):
+    response.delete_cookie(key=COOKIE_NAME, samesite="lax")
+    return {"success": True}
+
+
+@app.get("/api/auth/me")
+async def me(current_user: dict = Depends(get_current_user)):
+    return user_store.public(current_user)
+
+
+# ---------------------------------------------------------------------------
 # Job endpoints
 # ---------------------------------------------------------------------------
 
 @app.post("/api/clip", status_code=201)
-async def clip(payload: ClipPayload):
+async def clip(payload: ClipPayload, current_user: dict = Depends(get_current_user)):
     if not payload.raw_text.strip():
         raise HTTPException(status_code=400, detail="raw_text is required")
 
@@ -167,25 +244,28 @@ async def clip(payload: ClipPayload):
             "stack": [], "description": "",
         }
 
+    jobs = load_jobs(current_user["id"])
     job = {
-        "id": len(jobs) + 1,
+        "id": max((j["id"] for j in jobs), default=0) + 1,
         "url": payload.url,
         "status": "saved",
         "clippedAt": datetime.now(timezone.utc).isoformat(),
         **parsed,
     }
     jobs.append(job)
+    save_jobs(current_user["id"], jobs)
     print(f"[clip] saved — id: {job['id']} | title: {job['title']}")
     return {"received": True, "id": job["id"]}
 
 
 @app.get("/api/jobs")
-async def get_jobs():
-    return jobs
+async def get_jobs(current_user: dict = Depends(get_current_user)):
+    return load_jobs(current_user["id"])
 
 
 @app.patch("/api/jobs/{job_id}")
-async def patch_job(job_id: int, patch: JobPatch):
+async def patch_job(job_id: int, patch: JobPatch, current_user: dict = Depends(get_current_user)):
+    jobs = load_jobs(current_user["id"])
     job = next((j for j in jobs if j["id"] == job_id), None)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -193,20 +273,25 @@ async def patch_job(job_id: int, patch: JobPatch):
         if patch.status not in VALID_STATUSES:
             raise HTTPException(status_code=400, detail=f"Invalid status: {patch.status}")
         job["status"] = patch.status
+    save_jobs(current_user["id"], jobs)
     return job
 
 
 # ---------------------------------------------------------------------------
-# Resume endpoints (multi-resume)
+# Resume endpoints
 # ---------------------------------------------------------------------------
 
 @app.get("/api/resumes")
-async def get_resumes():
-    return resumes
+async def get_resumes(current_user: dict = Depends(get_current_user)):
+    return load_resumes(current_user["id"])
 
 
 @app.post("/api/resumes", status_code=201)
-async def create_resume(file: UploadFile = File(...), name: str = Form("My Resume")):
+async def create_resume(
+    file: UploadFile = File(...),
+    name: str = Form("My Resume"),
+    current_user: dict = Depends(get_current_user),
+):
     try:
         raw_text = await extract_text(file)
     except ValueError as err:
@@ -214,6 +299,7 @@ async def create_resume(file: UploadFile = File(...), name: str = Form("My Resum
 
     anonymized = anonymize(raw_text)
     fp = fingerprint(anonymized)
+    resumes = load_resumes(current_user["id"])
 
     cached = next((r for r in resumes if r.get("hash") == fp), None)
     if cached:
@@ -225,17 +311,18 @@ async def create_resume(file: UploadFile = File(...), name: str = Form("My Resum
         print(f"[resumes] AI failed: {err}")
         parsed = {"skills": [], "years_experience": 0, "current_role": "", "summary": ""}
 
-    resume = _parsed_to_resume(
-        parsed, name=name.strip() or "My Resume", source="cv", hash_value=fp
-    )
+    resume = _parsed_to_resume(parsed, resumes, name=name.strip() or "My Resume", source="cv", hash_value=fp)
     resumes.append(resume)
-    save_resumes(resumes)
-    print(f"[resumes] created — id: {resume['id']} | name: {resume['name']} | skills: {len(resume['skills'])}")
+    save_resumes(current_user["id"], resumes)
+    print(f"[resumes] created — id: {resume['id']} | name: {resume['name']}")
     return {**resume, "cached": False}
 
 
 @app.post("/api/resumes/manual", status_code=201)
-async def create_resume_manual(payload: CreateManualResumePayload):
+async def create_resume_manual(
+    payload: CreateManualResumePayload,
+    current_user: dict = Depends(get_current_user),
+):
     if not payload.entries:
         raise HTTPException(status_code=400, detail="At least one work history entry is required")
 
@@ -246,50 +333,59 @@ async def create_resume_manual(payload: CreateManualResumePayload):
         print(f"[resumes/manual] AI failed: {err}")
         parsed = {"skills": [], "years_experience": 0, "current_role": "", "summary": ""}
 
-    resume = _parsed_to_resume(
-        parsed, name=payload.name.strip() or "My Resume", source="manual"
-    )
+    resumes = load_resumes(current_user["id"])
+    resume = _parsed_to_resume(parsed, resumes, name=payload.name.strip() or "My Resume", source="manual")
     resumes.append(resume)
-    save_resumes(resumes)
+    save_resumes(current_user["id"], resumes)
     print(f"[resumes/manual] created — id: {resume['id']} | name: {resume['name']}")
     return resume
 
 
 @app.patch("/api/resumes/{resume_id}")
-async def patch_resume(resume_id: int, patch: ResumePatch):
+async def patch_resume(
+    resume_id: int,
+    patch: ResumePatch,
+    current_user: dict = Depends(get_current_user),
+):
+    resumes = load_resumes(current_user["id"])
     resume = next((r for r in resumes if r["id"] == resume_id), None)
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
 
     if patch.name is not None:
         resume["name"] = patch.name.strip() or resume["name"]
-
     if patch.is_active is True:
         for r in resumes:
             r["is_active"] = False
         resume["is_active"] = True
 
-    save_resumes(resumes)
+    save_resumes(current_user["id"], resumes)
     return resume
 
 
 @app.delete("/api/resumes/{resume_id}", status_code=204)
-async def delete_resume(resume_id: int):
+async def delete_resume(resume_id: int, current_user: dict = Depends(get_current_user)):
+    resumes = load_resumes(current_user["id"])
     idx = next((i for i, r in enumerate(resumes) if r["id"] == resume_id), None)
     if idx is None:
         raise HTTPException(status_code=404, detail="Resume not found")
 
     was_active = resumes[idx].get("is_active", False)
     resumes.pop(idx)
-
     if was_active and resumes:
         resumes[0]["is_active"] = True
 
-    save_resumes(resumes)
+    save_resumes(current_user["id"], resumes)
 
 
 @app.patch("/api/resumes/{resume_id}/skills/{skill_name}")
-async def patch_resume_skill(resume_id: int, skill_name: str, patch: SkillPatch):
+async def patch_resume_skill(
+    resume_id: int,
+    skill_name: str,
+    patch: SkillPatch,
+    current_user: dict = Depends(get_current_user),
+):
+    resumes = load_resumes(current_user["id"])
     resume = next((r for r in resumes if r["id"] == resume_id), None)
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
@@ -305,11 +401,10 @@ async def patch_resume_skill(resume_id: int, skill_name: str, patch: SkillPatch)
         if not 1 <= patch.user_rating <= 5:
             raise HTTPException(status_code=400, detail="user_rating must be between 1 and 5")
         skill["user_rating"] = patch.user_rating
-
     if patch.note is not None:
         skill["note"] = patch.note
 
-    save_resumes(resumes)
+    save_resumes(current_user["id"], resumes)
     return skill
 
 
@@ -318,7 +413,7 @@ async def patch_resume_skill(resume_id: int, skill_name: str, patch: SkillPatch)
 # ---------------------------------------------------------------------------
 
 @app.post("/api/cv", status_code=201)
-async def upload_cv(file: UploadFile = File(...)):
+async def upload_cv(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
     try:
         raw_text = await extract_text(file)
     except ValueError as err:
@@ -326,6 +421,7 @@ async def upload_cv(file: UploadFile = File(...)):
 
     anonymized = anonymize(raw_text)
     fp = fingerprint(anonymized)
+    resumes = load_resumes(current_user["id"])
 
     cached = next((r for r in resumes if r.get("hash") == fp), None)
     if cached:
@@ -338,23 +434,26 @@ async def upload_cv(file: UploadFile = File(...)):
         parsed = {"skills": [], "years_experience": 0, "current_role": "", "summary": ""}
 
     name = (file.filename or "CV Upload").rsplit(".", 1)[0]
-    resume = _parsed_to_resume(parsed, name=name, source="cv", hash_value=fp)
+    resume = _parsed_to_resume(parsed, resumes, name=name, source="cv", hash_value=fp)
     resumes.append(resume)
-    save_resumes(resumes)
-    print(f"[cv] parsed — skills: {len(resume['skills'])} | years: {resume['years_experience']}")
+    save_resumes(current_user["id"], resumes)
     return {**resume, "cached": False}
 
 
 @app.get("/api/cv")
-async def get_cv():
-    active = _active_resume()
+async def get_cv(current_user: dict = Depends(get_current_user)):
+    resumes = load_resumes(current_user["id"])
+    active = _active_resume(resumes)
     if not active:
         raise HTTPException(status_code=404, detail="No CV uploaded yet")
     return active
 
 
 @app.post("/api/profile/manual", status_code=201)
-async def build_manual_profile(payload: ManualProfilePayload):
+async def build_manual_profile(
+    payload: ManualProfilePayload,
+    current_user: dict = Depends(get_current_user),
+):
     if not payload.entries:
         raise HTTPException(status_code=400, detail="At least one work history entry is required")
 
@@ -365,20 +464,24 @@ async def build_manual_profile(payload: ManualProfilePayload):
         print(f"[profile/manual] AI failed: {err}")
         parsed = {"skills": [], "years_experience": 0, "current_role": "", "summary": ""}
 
-    resume = _parsed_to_resume(parsed, name="Manual Profile", source="manual")
+    resumes = load_resumes(current_user["id"])
+    resume = _parsed_to_resume(parsed, resumes, name="Manual Profile", source="manual")
     resumes.append(resume)
-    save_resumes(resumes)
-    print(f"[profile/manual] built — skills: {len(resume['skills'])}")
+    save_resumes(current_user["id"], resumes)
     return resume
 
 
 @app.post("/api/profile/refine")
-async def refine_profile(payload: RefinePayload):
-    active = _active_resume()
+async def refine_profile(
+    payload: RefinePayload,
+    current_user: dict = Depends(get_current_user),
+):
+    resumes = load_resumes(current_user["id"])
+    active = _active_resume(resumes)
     if not active:
-        raise HTTPException(status_code=404, detail="No profile to refine. Upload a CV or build manually first.")
+        raise HTTPException(status_code=404, detail="No profile to refine.")
     if active.get("refined"):
-        raise HTTPException(status_code=400, detail="Profile already refined. Edit skills individually.")
+        raise HTTPException(status_code=400, detail="Profile already refined.")
     if not payload.entries:
         raise HTTPException(status_code=400, detail="At least one work history entry is required")
 
@@ -394,14 +497,18 @@ async def refine_profile(payload: RefinePayload):
 
     active["skills"] = updated_skills
     active["refined"] = True
-    save_resumes(resumes)
-    print(f"[profile/refine] done — skills: {len(active['skills'])}")
+    save_resumes(current_user["id"], resumes)
     return active
 
 
 @app.patch("/api/cv/skills/{skill_name}")
-async def patch_skill(skill_name: str, patch: SkillPatch):
-    active = _active_resume()
+async def patch_skill(
+    skill_name: str,
+    patch: SkillPatch,
+    current_user: dict = Depends(get_current_user),
+):
+    resumes = load_resumes(current_user["id"])
+    active = _active_resume(resumes)
     if not active:
         raise HTTPException(status_code=404, detail="No profile found")
 
@@ -410,15 +517,14 @@ async def patch_skill(skill_name: str, patch: SkillPatch):
         None,
     )
     if not skill:
-        raise HTTPException(status_code=404, detail=f"Skill '{skill_name}' not found in profile")
+        raise HTTPException(status_code=404, detail=f"Skill '{skill_name}' not found")
 
     if patch.user_rating is not None:
         if not 1 <= patch.user_rating <= 5:
             raise HTTPException(status_code=400, detail="user_rating must be between 1 and 5")
         skill["user_rating"] = patch.user_rating
-
     if patch.note is not None:
         skill["note"] = patch.note
 
-    save_resumes(resumes)
+    save_resumes(current_user["id"], resumes)
     return skill
