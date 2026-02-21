@@ -1,6 +1,7 @@
 {
   "nav": {
-    "jobs": "Oferty",
+    "jobs": "Przegląd",
+    "pipeline": "Pipeline",
     "simulator": "Symulator",
     "learning": "Nauka",
     "howItWorks": "Jak to działa",
@@ -47,9 +48,12 @@
   "status": {
     "saved": "Zapisane",
     "applied": "Aplikowałem",
-    "interview": "Rozmowa umówiona",
+    "need_prep": "Wymaga przygotowania",
+    "interview": "Rozmowa",
     "offer": "Oferta",
-    "rejected": "Odrzucony"
+    "rejected": "Odrzucony",
+    "closed": "Zamknięte",
+    "accepted": "Zaakceptowane"
   },
   "jobCard": {
     "matchScore": "Match score",
@@ -101,6 +105,23 @@
     "technologies": "Używane technologie (oddzielone przecinkiem)",
     "submit": "Zbuduj profil",
     "submitting": "Analizuję..."
+  },
+  "pipeline": {
+    "title": "Pipeline ofert",
+    "subtitle": "Przeciągaj karty między kolumnami. Kliknij prawym przyciskiem po więcej opcji.",
+    "showArchived": "Pokaż archiwum ({{count}})",
+    "hideArchived": "Ukryj archiwum",
+    "archived": "Archiwum"
+  },
+  "contextMenu": {
+    "moveTo": "Przenieś do",
+    "archive": "Archiwizuj jako",
+    "restore": "Przywróć do"
+  },
+  "resumeBanner": {
+    "title": "Brak CV",
+    "description": "Wgraj CV, aby odblokować match score i gap analysis.",
+    "button": "Wgraj CV"
   },
   "addJobModal": {
     "title": "Dodaj ofertę pracy",

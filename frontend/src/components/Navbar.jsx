@@ -18,6 +18,7 @@ export default function Navbar() {
         </div>
         <nav className="flex items-center gap-6 text-sm">
           <NavLink to="/" end className={linkClass}>{t('nav.jobs')}</NavLink>
+          <NavLink to="/pipeline" className={linkClass}>{t('nav.pipeline')}</NavLink>
           <NavLink to="/how-it-works" className={linkClass}>{t('nav.howItWorks')}</NavLink>
           <a href="#" className="text-gray-400 hover:text-gray-100 transition-colors">{t('nav.simulator')}</a>
           <a href="#" className="text-gray-400 hover:text-gray-100 transition-colors">{t('nav.learning')}</a>

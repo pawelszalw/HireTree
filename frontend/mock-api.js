@@ -55,9 +55,30 @@ export function mockApiPlugin() {
       })
 
       // GET /api/jobs — return all clipped jobs
-      server.middlewares.use('/api/jobs', (req, res) => {
-        if (req.method !== 'GET') return json(res, { error: 'Method not allowed' }, 405)
-        json(res, jobs)
+      // PATCH /api/jobs/:id — update a job's status
+      server.middlewares.use('/api/jobs', async (req, res) => {
+        const idMatch = req.url?.match(/^\/(\d+)\/?$/)
+
+        if (!idMatch) {
+          if (req.method !== 'GET') return json(res, { error: 'Method not allowed' }, 405)
+          return json(res, jobs)
+        }
+
+        const id = parseInt(idMatch[1])
+        const job = jobs.find(j => j.id === id)
+        if (!job) return json(res, { error: 'Not found' }, 404)
+
+        if (req.method === 'PATCH') {
+          try {
+            const patch = await readBody(req)
+            if (patch.status !== undefined) job.status = patch.status
+            return json(res, job)
+          } catch (err) {
+            return json(res, { error: err.message }, 400)
+          }
+        }
+
+        json(res, { error: 'Method not allowed' }, 405)
       })
     },
   }

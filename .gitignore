@@ -1,6 +1,12 @@
 # Project
 prd.md
 
+# Local scripts
+run-server.sh
+run-claude.sh
+run-server.bat
+run-claude.bat
+
 # Dependencies
 node_modules/
 

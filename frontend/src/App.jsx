@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Dashboard from './pages/Dashboard'
 import HowItWorks from './pages/HowItWorks'
+import Pipeline from './pages/Pipeline'
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/pipeline" element={<Pipeline />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
           </Routes>
         </main>

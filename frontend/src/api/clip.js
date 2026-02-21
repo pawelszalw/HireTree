@@ -17,6 +17,16 @@ export async function fetchJobs() {
   return res.json()
 }
 
+export async function updateJobStatus(id, status) {
+  const res = await fetch(`${API_URL}/api/jobs/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  })
+  if (!res.ok) throw new Error(`Server error: ${res.status}`)
+  return res.json()
+}
+
 export async function uploadCV(file) {
   const formData = new FormData()
   formData.append('file', file)

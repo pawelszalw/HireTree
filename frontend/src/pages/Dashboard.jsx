@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import JobCard from '../components/JobCard'
 import AddJobModal from '../components/AddJobModal'
 import CVUploadSection from '../components/CVUploadSection'
-import { fetchJobs } from '../api/clip'
+import ResumeBanner from '../components/ResumeBanner'
+import { fetchJobs, fetchCV } from '../api/clip'
 
 const PIPELINE_STAGES = ['saved', 'applied', 'interview', 'offer', 'rejected']
 
@@ -11,6 +12,8 @@ export default function Dashboard() {
   const { t } = useTranslation()
   const [showModal, setShowModal] = useState(false)
   const [jobs, setJobs] = useState([])
+  const [hasCV, setHasCV] = useState(null) // null=loading, false=missing, true=present
+  const cvSectionRef = useRef(null)
 
   const loadJobs = () => {
     fetchJobs()
@@ -19,6 +22,9 @@ export default function Dashboard() {
   }
 
   useEffect(() => { loadJobs() }, [])
+  useEffect(() => {
+    fetchCV().then(data => setHasCV(!!data)).catch(() => setHasCV(false))
+  }, [])
 
   const pipelineCounts = PIPELINE_STAGES.reduce((acc, stage) => {
     acc[stage] = jobs.filter(j => j.status === stage).length
@@ -33,6 +39,13 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col gap-8">
       {showModal && <AddJobModal onClose={handleModalClose} />}
+
+      {/* Resume banner */}
+      {hasCV === false && (
+        <ResumeBanner
+          onUploadClick={() => cvSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
+        />
+      )}
 
       {/* Page title */}
       <div>
@@ -110,7 +123,9 @@ export default function Dashboard() {
       </div>
 
       {/* CV / Skills profile */}
-      <CVUploadSection />
+      <div ref={cvSectionRef}>
+        <CVUploadSection onCVLoaded={() => setHasCV(true)} />
+      </div>
 
     </div>
   )

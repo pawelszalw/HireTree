@@ -154,6 +154,25 @@ async def get_jobs():
     return jobs
 
 
+class JobPatch(BaseModel):
+    status: str | None = None
+
+
+VALID_STATUSES = {'saved', 'applied', 'need_prep', 'interview', 'offer', 'rejected', 'closed', 'accepted'}
+
+
+@app.patch("/api/jobs/{job_id}")
+async def patch_job(job_id: int, patch: JobPatch):
+    job = next((j for j in jobs if j["id"] == job_id), None)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if patch.status is not None:
+        if patch.status not in VALID_STATUSES:
+            raise HTTPException(status_code=400, detail=f"Invalid status: {patch.status}")
+        job["status"] = patch.status
+    return job
+
+
 # ---------------------------------------------------------------------------
 # CV / profile endpoints
 # ---------------------------------------------------------------------------

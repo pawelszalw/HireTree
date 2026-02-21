@@ -1,6 +1,7 @@
 {
   "nav": {
-    "jobs": "Jobs",
+    "jobs": "Overview",
+    "pipeline": "Pipeline",
     "simulator": "Simulator",
     "learning": "Learning",
     "howItWorks": "How it works",
@@ -47,9 +48,12 @@
   "status": {
     "saved": "Saved",
     "applied": "Applied",
-    "interview": "Interview scheduled",
+    "need_prep": "Need Preparation",
+    "interview": "Interview",
     "offer": "Offer",
-    "rejected": "Rejected"
+    "rejected": "Rejected",
+    "closed": "Closed",
+    "accepted": "Accepted"
   },
   "jobCard": {
     "matchScore": "Match score",
@@ -99,6 +103,23 @@
     "technologies": "Technologies used (comma-separated)",
     "submit": "Build profile",
     "submitting": "Analysing..."
+  },
+  "pipeline": {
+    "title": "Job Pipeline",
+    "subtitle": "Drag cards between columns to update status. Right-click for more options.",
+    "showArchived": "Show archived ({{count}})",
+    "hideArchived": "Hide archived",
+    "archived": "Archived"
+  },
+  "contextMenu": {
+    "moveTo": "Move to",
+    "archive": "Archive as",
+    "restore": "Restore to"
+  },
+  "resumeBanner": {
+    "title": "No CV uploaded",
+    "description": "Upload your CV to unlock match scores and gap analysis.",
+    "button": "Upload CV"
   },
   "addJobModal": {
     "title": "Add job offer",

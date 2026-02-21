@@ -10,7 +10,7 @@ const RECENCY_TIERS = [
   { key: '3+ years ago',   icon: '⬜', labelKey: 'skillProfile.outdatedLabel' },
 ]
 
-export default function CVUploadSection() {
+export default function CVUploadSection({ onCVLoaded }) {
   const { t } = useTranslation()
   const fileInputRef = useRef(null)
 
@@ -38,6 +38,7 @@ export default function CVUploadSection() {
       setCv(data)
       setStatus(null)
       setShowManual(false)
+      onCVLoaded?.()
     } catch (err) {
       setError(err.message)
       setStatus('error')
@@ -48,6 +49,7 @@ export default function CVUploadSection() {
     const data = await buildManualProfile(entries)
     setCv(data)
     setShowManual(false)
+    onCVLoaded?.()
   }
 
   const handleRefineSubmit = async (entries) => {
