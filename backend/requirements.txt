@@ -8,5 +8,6 @@ pydantic[email]
 python-multipart
 pymupdf
 python-docx
-passlib[bcrypt]
+bcrypt
+groq
 python-jose[cryptography]

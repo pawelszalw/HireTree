@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Cookie, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -10,6 +10,7 @@ load_dotenv()
 from providers.claude import ClaudeProvider
 from providers.openai import OpenAIProvider
 from providers.gemini import GeminiProvider
+from providers.groq import GroqProvider
 from providers.base import BaseProvider
 from cv_parser import extract_text, anonymize, fingerprint
 from profile_utils import skills_to_compact, load_resumes, save_resumes, load_jobs, save_jobs
@@ -38,8 +39,10 @@ def load_provider() -> BaseProvider:
         return OpenAIProvider(api_key=os.environ["OPENAI_API_KEY"])
     if name == "gemini":
         return GeminiProvider(api_key=os.environ["GEMINI_API_KEY"])
+    if name == "groq":
+        return GroqProvider(api_key=os.environ["GROQ_API_KEY"])
     raise RuntimeError(
-        f"Unknown AI_PROVIDER '{name}'. Set it to: claude | openai | gemini"
+        f"Unknown AI_PROVIDER '{name}'. Set it to: claude | openai | gemini | groq"
     )
 
 
@@ -144,7 +147,7 @@ def _set_auth_cookie(response: Response, user_id: str) -> None:
 
 class AuthPayload(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=1, max_length=72)
 
 
 class ClipPayload(BaseModel):
