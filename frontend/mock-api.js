@@ -7,6 +7,8 @@ const jobs = []
 function json(res, data, status = 200) {
   res.statusCode = status
   res.setHeader('Content-Type', 'application/json')
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   res.end(JSON.stringify(data))
 }
 
@@ -27,9 +29,24 @@ export function mockApiPlugin() {
     configureServer(server) {
       console.log('[mock-api] ready — POST /api/clip  GET /api/jobs  GET /api/auth/me')
 
+      // Handle CORS preflight from browser extension
+      server.middlewares.use('/api', (req, res, next) => {
+        if (req.method === 'OPTIONS') {
+          res.setHeader('Access-Control-Allow-Origin', '*')
+          res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+          res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS')
+          res.statusCode = 204
+          res.end()
+          return
+        }
+        next()
+      })
+
       // Auth endpoints — auto-login as dev user in mock mode
       server.middlewares.use('/api/auth', async (req, res) => {
         const mockUser = { id: 'mock-user', email: 'dev@hiretree.io', created_at: new Date().toISOString() }
+        // Set a mock cookie so the browser extension can authenticate in dev mode
+        res.setHeader('Set-Cookie', 'access_token=mock-dev-token; Path=/; SameSite=Lax')
         if (req.url === '/me')       return json(res, mockUser)
         if (req.url === '/login')    return json(res, mockUser)
         if (req.url === '/register') return json(res, mockUser)

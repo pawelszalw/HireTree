@@ -150,6 +150,7 @@ class AuthPayload(BaseModel):
 class ClipPayload(BaseModel):
     url: str = ""
     raw_text: str
+    force: bool = False
 
 
 class WorkEntry(BaseModel):
@@ -262,11 +263,16 @@ async def clip(payload: ClipPayload, current_user: dict = Depends(get_current_us
     except Exception as err:
         print(f"[parser] failed: {err} — storing raw")
         parsed = {
+            "is_job_offer": True,
             "title": payload.url or "Untitled",
             "company": "", "location": "", "salary": "",
             "mode": "", "seniority": "", "contract": "",
             "stack": [], "description": "",
         }
+
+    if not payload.force and parsed.get("is_job_offer") is False:
+        print(f"[clip] rejected — not a job offer | url: {payload.url}")
+        return {"received": False, "is_job_offer": False}
 
     jobs = load_jobs(current_user["id"])
 

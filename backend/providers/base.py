@@ -4,6 +4,7 @@ PARSE_PROMPT = """Extract structured job offer data from the text below.
 Return a JSON object with exactly these fields:
 
 {
+  "is_job_offer": true,
   "title": "job title",
   "company": "company name",
   "location": "city or location",
@@ -15,6 +16,7 @@ Return a JSON object with exactly these fields:
   "description": "2-3 sentence summary of the role"
 }
 
+Set "is_job_offer" to false if the text is clearly NOT a job offer (e.g. a news article, blog post, product page, or general website content).
 Return only valid JSON. No markdown, no explanation."""
 
 CV_PARSE_PROMPT = """You are a CV analyser. The CV text below has been anonymised.
