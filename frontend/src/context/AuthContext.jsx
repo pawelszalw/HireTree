@@ -1,6 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react'
-
-const AuthContext = createContext(null)
+import { useState, useEffect } from 'react'
+import { AuthContext } from './useAuth'
 
 const API = import.meta.env.VITE_API_URL ?? ''
 const OPTS = { credentials: 'include', headers: { 'Content-Type': 'application/json' } }
@@ -50,4 +49,3 @@ export function AuthProvider({ children }) {
   )
 }
 
-export const useAuth = () => useContext(AuthContext)

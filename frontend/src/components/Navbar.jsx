@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 
 const linkClass = ({ isActive }) =>
   `hover:text-gray-100 transition-colors ${isActive ? 'text-gray-100' : 'text-gray-400'}`
