@@ -1,9 +1,13 @@
 import json
+import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-USERS_JSON_PATH = Path(__file__).parent / "users.json"
+DATA_DIR = Path(os.getenv("DATA_DIR", Path(__file__).parent / "data"))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+USERS_JSON_PATH = DATA_DIR / "users.json"
 
 
 def _load() -> list:

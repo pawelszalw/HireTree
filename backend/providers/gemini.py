@@ -1,18 +1,21 @@
 import json
 import asyncio
-import google.generativeai as genai
+from google import genai
 from .base import BaseProvider, PARSE_PROMPT, CV_PARSE_PROMPT, WORK_HISTORY_PROMPT, REFINE_PROMPT
 
 
 class GeminiProvider(BaseProvider):
     def __init__(self, api_key: str):
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
+        self.client = genai.Client(api_key=api_key)
+        self.model = "gemini-2.0-flash"
 
     async def _call(self, prompt: str) -> dict:
-        response = await asyncio.to_thread(self.model.generate_content, prompt)
+        response = await asyncio.to_thread(
+            self.client.models.generate_content,
+            model=self.model,
+            contents=prompt,
+        )
         text = response.text.strip()
-        # Strip markdown code block if model wraps the response
         if text.startswith("```"):
             text = text.split("```")[1]
             if text.startswith("json"):

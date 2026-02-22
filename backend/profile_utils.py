@@ -1,8 +1,12 @@
 import json
+import os
 from pathlib import Path
 
-PROFILE_JSON_PATH = Path(__file__).parent / "profile.json"
-JOBS_JSON_PATH = Path(__file__).parent / "jobs.json"
+DATA_DIR = Path(os.getenv("DATA_DIR", Path(__file__).parent / "data"))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+PROFILE_JSON_PATH = DATA_DIR / "profile.json"
+JOBS_JSON_PATH    = DATA_DIR / "jobs.json"
 
 
 def skills_to_compact(skills: list[dict]) -> str:

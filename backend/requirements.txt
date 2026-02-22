@@ -3,8 +3,8 @@ uvicorn
 python-dotenv
 anthropic
 openai
-google-generativeai
-pydantic
+google-genai
+pydantic[email]
 python-multipart
 pymupdf
 python-docx
