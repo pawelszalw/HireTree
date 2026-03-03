@@ -7,7 +7,7 @@ from .base import BaseProvider, PARSE_PROMPT, CV_PARSE_PROMPT, WORK_HISTORY_PROM
 class GeminiProvider(BaseProvider):
     def __init__(self, api_key: str):
         self.client = genai.Client(api_key=api_key)
-        self.model = "gemini-2.0-flash"
+        self.model = "gemini-2.5-flash"
 
     async def _call(self, prompt: str) -> dict:
         response = await asyncio.to_thread(

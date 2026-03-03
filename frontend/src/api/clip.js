@@ -32,6 +32,24 @@ export async function updateJobStatus(id, status) {
   }))
 }
 
+export async function patchJob(id, patch) {
+  return handleResponse(await fetch(`${API_URL}/api/jobs/${id}`, {
+    method: 'PATCH', ...JSON_CREDS,
+    body: JSON.stringify(patch),
+  }))
+}
+
+export async function reparseJob(id) {
+  return handleResponse(await fetch(`${API_URL}/api/jobs/${id}/reparse`, {
+    method: 'POST', ...JSON_CREDS,
+  }))
+}
+
+export async function deleteJob(id) {
+  const res = await fetch(`${API_URL}/api/jobs/${id}`, { method: 'DELETE', ...CREDS })
+  if (!res.ok) throw new Error(`Server error: ${res.status}`)
+}
+
 export async function uploadCV(file) {
   const formData = new FormData()
   formData.append('file', file)

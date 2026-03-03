@@ -13,6 +13,20 @@ const STATUS_STYLES = {
   accepted:  'bg-emerald-900 text-emerald-300',
 }
 
+const SOURCE_SITES = [
+  { match: 'justjoin.it',     label: 'JustJoinIT'   },
+  { match: 'nofluffjobs.com', label: 'NoFluffJobs'  },
+  { match: 'linkedin.com',    label: 'LinkedIn'      },
+  { match: 'pracuj.pl',       label: 'Pracuj.pl'     },
+  { match: 'theprotocol.it',  label: 'TheProtocol'   },
+  { match: 'bulldogjob.pl',   label: 'Bulldogjob'    },
+]
+
+function getSource(url) {
+  if (!url) return null
+  return SOURCE_SITES.find(s => url.includes(s.match))?.label ?? null
+}
+
 function scoreColor(score) {
   if (score == null) return 'bg-gray-600'
   if (score >= 75) return 'bg-emerald-500'
@@ -23,8 +37,9 @@ function scoreColor(score) {
 export default function JobCard({ job }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { title, company, stack = [], salary, mode, seniority, match_score, matched = [], missing = [], status } = job
+  const { title, company, stack = [], salary, mode, seniority, match_score, matched = [], missing = [], status, apply_url, url } = job
   const [showGaps, setShowGaps] = useState(false)
+  const source = getSource(url)
 
   return (
     <div
@@ -38,9 +53,14 @@ export default function JobCard({ job }) {
           <h3 className="font-semibold text-gray-100 leading-tight">{title}</h3>
           <p className="text-sm text-gray-400 mt-0.5">{company}</p>
         </div>
-        <span className={`text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ${STATUS_STYLES[status] ?? 'bg-gray-700 text-gray-300'}`}>
-          {t(`status.${status}`)}
-        </span>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <span className={`text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ${STATUS_STYLES[status] ?? 'bg-gray-700 text-gray-300'}`}>
+            {t(`status.${status}`)}
+          </span>
+          {source && (
+            <span className="text-[10px] text-gray-600 whitespace-nowrap">{source}</span>
+          )}
+        </div>
       </div>
 
       {/* Stack tags */}
@@ -127,6 +147,17 @@ export default function JobCard({ job }) {
         >
           {showGaps ? t('jobCard.hideGaps') : t('jobCard.gapAnalysis')}
         </button>
+        {apply_url && (
+          <a
+            href={apply_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="flex-1 text-xs bg-blue-700 hover:bg-blue-600 text-white py-2 rounded-lg transition-colors text-center"
+          >
+            {t('jobCard.apply')} ↗
+          </a>
+        )}
         <button
           onClick={e => e.stopPropagation()}
           className="flex-1 text-xs bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-lg transition-colors"

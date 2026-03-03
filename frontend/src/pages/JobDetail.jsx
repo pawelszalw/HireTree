@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { fetchJob, fetchJobs, updateJobStatus } from '../api/clip'
+import { fetchJob, fetchJobs, updateJobStatus, reparseJob, deleteJob, patchJob } from '../api/clip'
 
 const STATUS_STYLES = {
   saved:     'bg-gray-700 text-gray-300',
@@ -78,6 +78,11 @@ export default function JobDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [statusChanging, setStatusChanging] = useState(false)
+  const [reparsing, setReparsing] = useState(false)
+  const [reparseError, setReparseError] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [editingApplyUrl, setEditingApplyUrl] = useState(false)
+  const [applyUrlDraft, setApplyUrlDraft] = useState('')
 
   useEffect(() => {
     setLoading(true)
@@ -93,6 +98,36 @@ export default function JobDetail() {
       .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [id])
+
+  const handleSaveApplyUrl = async () => {
+    const updated = await patchJob(job.id, { apply_url: applyUrlDraft.trim() })
+    setJob(j => ({ ...j, apply_url: updated.apply_url }))
+    setEditingApplyUrl(false)
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm(t('jobDetail.deleteConfirm'))) return
+    setDeleting(true)
+    try {
+      await deleteJob(job.id)
+      navigate('/jobs')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handleReparse = async () => {
+    setReparsing(true)
+    setReparseError(null)
+    try {
+      const updated = await reparseJob(job.id)
+      setJob(updated)
+    } catch (err) {
+      setReparseError(err.message)
+    } finally {
+      setReparsing(false)
+    }
+  }
 
   const handleStatusChange = async (newStatus) => {
     if (!job || newStatus === job.status) return
@@ -127,7 +162,7 @@ export default function JobDetail() {
 
   const {
     title, company, location, salary, mode, seniority, contract,
-    stack = [], description, url, status, clippedAt,
+    stack = [], description, url, apply_url, status, clippedAt,
     match_score, matched = [], missing = [],
   } = job
 
@@ -292,23 +327,78 @@ export default function JobDetail() {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3 flex-wrap pb-4">
-          {url && (
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-gray-200 px-4 py-2 rounded-lg transition-colors"
+        <div className="flex flex-col gap-2 pb-4">
+          <div className="flex gap-3 flex-wrap">
+            {url && (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-gray-200 px-4 py-2 rounded-lg transition-colors"
+              >
+                {t('jobDetail.viewOriginal')} ↗
+              </a>
+            )}
+            {apply_url && !editingApplyUrl && (
+              <a
+                href={apply_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                {t('jobDetail.apply')} ↗
+              </a>
+            )}
+            {editingApplyUrl ? (
+              <div className="flex gap-2 flex-1">
+                <input
+                  autoFocus
+                  type="url"
+                  value={applyUrlDraft}
+                  onChange={e => setApplyUrlDraft(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSaveApplyUrl(); if (e.key === 'Escape') setEditingApplyUrl(false) }}
+                  placeholder="https://..."
+                  className="flex-1 text-sm bg-gray-800 border border-gray-600 text-gray-100 px-3 py-1.5 rounded-lg outline-none focus:border-blue-500"
+                />
+                <button onClick={handleSaveApplyUrl} className="text-sm bg-blue-700 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg transition-colors">
+                  {t('jobDetail.save')}
+                </button>
+                <button onClick={() => setEditingApplyUrl(false)} className="text-sm text-gray-500 hover:text-gray-300 px-2">✕</button>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setApplyUrlDraft(apply_url || ''); setEditingApplyUrl(true) }}
+                className="text-sm border border-dashed border-gray-700 hover:border-gray-500 text-gray-500 hover:text-gray-300 px-4 py-2 rounded-lg transition-colors"
+              >
+                {apply_url ? t('jobDetail.editApplyUrl') : t('jobDetail.setApplyUrl')}
+              </button>
+            )}
+            <button
+              onClick={handleReparse}
+              disabled={reparsing}
+              className="text-sm border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-gray-200 px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
             >
-              {t('jobDetail.viewOriginal')} ↗
-            </a>
+              {reparsing ? t('jobDetail.reparsing') : t('jobDetail.reparse')}
+            </button>
+            <button
+              onClick={() => navigate('/simulator')}
+              className="text-sm bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              {t('jobDetail.simulate')}
+            </button>
+          </div>
+          {reparseError && (
+            <p className="text-xs text-red-400">{reparseError}</p>
           )}
-          <button
-            onClick={() => navigate('/simulator')}
-            className="text-sm bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            {t('jobDetail.simulate')}
-          </button>
+          <div className="pt-2 border-t border-gray-800">
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="text-xs text-red-500 hover:text-red-400 transition-colors disabled:opacity-50"
+            >
+              {deleting ? t('jobDetail.deleting') : t('jobDetail.delete')}
+            </button>
+          </div>
         </div>
 
       </div>

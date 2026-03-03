@@ -80,6 +80,7 @@
     "matched": "Matched",
     "missing": "Missing",
     "noStack": "No stack info extracted yet",
+    "apply": "Apply",
     "simulateInterview": "Simulate interview"
   },
   "interviewSimulator": {
@@ -182,6 +183,15 @@
     "mode": "Mode",
     "savedOn": "Saved on",
     "viewOriginal": "View original offer",
+    "apply": "Apply",
+    "setApplyUrl": "+ Set apply link",
+    "editApplyUrl": "Edit apply link",
+    "save": "Save",
+    "reparse": "Re-parse with AI",
+    "reparsing": "Parsing...",
+    "delete": "Delete job",
+    "deleting": "Deleting...",
+    "deleteConfirm": "Delete this job offer?",
     "simulate": "Simulate interview",
     "changeStatus": "Change status"
   },

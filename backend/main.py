@@ -153,6 +153,7 @@ class AuthPayload(BaseModel):
 class ClipPayload(BaseModel):
     url: str = ""
     raw_text: str
+    apply_url: str = ""
     force: bool = False
 
 
@@ -179,6 +180,7 @@ class SkillPatch(BaseModel):
 
 class JobPatch(BaseModel):
     status: str | None = None
+    apply_url: str | None = None
 
 
 class ResumePatch(BaseModel):
@@ -261,10 +263,12 @@ async def clip(payload: ClipPayload, current_user: dict = Depends(get_current_us
     if not payload.raw_text.strip():
         raise HTTPException(status_code=400, detail="raw_text is required")
 
+    print(f"[clip] parsing with AI | url: {payload.url} | text_len: {len(payload.raw_text)}")
     try:
         parsed = await provider.parse_job(payload.raw_text)
+        print(f"[clip] AI ok | is_job_offer: {parsed.get('is_job_offer')} | title: {parsed.get('title')} | stack: {parsed.get('stack')}")
     except Exception as err:
-        print(f"[parser] failed: {err} — storing raw")
+        print(f"[clip] AI failed: {err} — storing raw")
         parsed = {
             "is_job_offer": True,
             "title": payload.url or "Untitled",
@@ -288,6 +292,8 @@ async def clip(payload: ClipPayload, current_user: dict = Depends(get_current_us
     job = {
         "id": max((j["id"] for j in jobs), default=0) + 1,
         "url": payload.url,
+        "apply_url": payload.apply_url,
+        "raw_text": payload.raw_text,
         "status": "saved",
         "clippedAt": datetime.now(timezone.utc).isoformat(),
         **parsed,
@@ -322,6 +328,45 @@ async def get_job(job_id: int, current_user: dict = Depends(get_current_user)):
     return {**job, **_compute_match(job.get("stack", []), resume_skills)}
 
 
+@app.post("/api/jobs/{job_id}/reparse")
+async def reparse_job(job_id: int, current_user: dict = Depends(get_current_user)):
+    jobs = load_jobs(current_user["id"])
+    job = next((j for j in jobs if j["id"] == job_id), None)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    raw_text = job.get("raw_text", "")
+    if not raw_text.strip():
+        raise HTTPException(status_code=400, detail="No raw text stored for this job — re-clip it from the extension.")
+
+    print(f"[reparse] job_id: {job_id} | text_len: {len(raw_text)}")
+    try:
+        parsed = await provider.parse_job(raw_text)
+        print(f"[reparse] AI ok | title: {parsed.get('title')} | stack: {parsed.get('stack')}")
+    except Exception as err:
+        print(f"[reparse] AI failed: {err}")
+        raise HTTPException(status_code=502, detail=f"AI parsing failed: {err}")
+
+    job.update({k: v for k, v in parsed.items() if k != "is_job_offer"})
+    save_jobs(current_user["id"], jobs)
+
+    resumes = load_resumes(current_user["id"])
+    active = _active_resume(resumes)
+    resume_skills = active.get("skills", []) if active else []
+    return {**job, **_compute_match(job.get("stack", []), resume_skills)}
+
+
+@app.delete("/api/jobs/{job_id}", status_code=204)
+async def delete_job(job_id: int, current_user: dict = Depends(get_current_user)):
+    jobs = load_jobs(current_user["id"])
+    idx = next((i for i, j in enumerate(jobs) if j["id"] == job_id), None)
+    if idx is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    jobs.pop(idx)
+    save_jobs(current_user["id"], jobs)
+    print(f"[jobs] deleted — id: {job_id}")
+
+
 @app.patch("/api/jobs/{job_id}")
 async def patch_job(job_id: int, patch: JobPatch, current_user: dict = Depends(get_current_user)):
     jobs = load_jobs(current_user["id"])
@@ -332,6 +377,8 @@ async def patch_job(job_id: int, patch: JobPatch, current_user: dict = Depends(g
         if patch.status not in VALID_STATUSES:
             raise HTTPException(status_code=400, detail=f"Invalid status: {patch.status}")
         job["status"] = patch.status
+    if patch.apply_url is not None:
+        job["apply_url"] = patch.apply_url
     save_jobs(current_user["id"], jobs)
     return job
 

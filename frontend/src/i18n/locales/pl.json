@@ -80,6 +80,7 @@
     "matched": "Dopasowane",
     "missing": "Brakujące",
     "noStack": "Brak informacji o stacku",
+    "apply": "Aplikuj",
     "simulateInterview": "Symuluj rozmowę"
   },
   "interviewSimulator": {
@@ -184,6 +185,15 @@
     "mode": "Tryb pracy",
     "savedOn": "Zapisano",
     "viewOriginal": "Zobacz oryginalne ogłoszenie",
+    "apply": "Aplikuj",
+    "setApplyUrl": "+ Ustaw link do aplikacji",
+    "editApplyUrl": "Edytuj link do aplikacji",
+    "save": "Zapisz",
+    "reparse": "Parsuj ponownie AI",
+    "reparsing": "Parsuję...",
+    "delete": "Usuń ofertę",
+    "deleting": "Usuwanie...",
+    "deleteConfirm": "Usunąć tę ofertę pracy?",
     "simulate": "Symuluj rozmowę",
     "changeStatus": "Zmień status"
   },
