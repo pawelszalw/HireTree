@@ -1,0 +1,184 @@
+[
+  {
+    "skill": "Python",
+    "question": "What is the difference between a list and a tuple in Python?",
+    "answer": "Lists are mutable (can be changed after creation), tuples are immutable. Tuples are generally faster and use less memory. Lists use [] and tuples use ().",
+    "category": "basics",
+    "difficulty": "easy"
+  },
+  {
+    "skill": "Python",
+    "question": "Explain Python's GIL (Global Interpreter Lock).",
+    "answer": "The GIL is a mutex that prevents multiple native threads from executing Python bytecodes simultaneously. It limits CPU-bound parallelism in threads but doesn't affect I/O-bound operations or multi-process concurrency.",
+    "category": "concurrency",
+    "difficulty": "medium"
+  },
+  {
+    "skill": "Python",
+    "question": "What is the difference between `__str__` and `__repr__`?",
+    "answer": "`__str__` is for human-readable output (used by print/str()), `__repr__` is for unambiguous developer-readable output (used by repr() and the REPL). If only one is defined, `__repr__` is used as fallback for both.",
+    "category": "oop",
+    "difficulty": "medium"
+  },
+  {
+    "skill": "Python",
+    "question": "What are generators and when would you use them?",
+    "answer": "Generators are functions that use `yield` to produce values lazily one at a time. They are memory-efficient for large datasets since they don't store all values in memory. Use them for large file processing, infinite sequences, or pipeline transformations.",
+    "category": "advanced",
+    "difficulty": "medium"
+  },
+  {
+    "skill": "JavaScript",
+    "question": "What is the difference between `==` and `===` in JavaScript?",
+    "answer": "`==` performs type coercion before comparison (e.g., '1' == 1 is true). `===` (strict equality) compares both value and type without coercion (e.g., '1' === 1 is false). Always prefer `===`.",
+    "category": "basics",
+    "difficulty": "easy"
+  },
+  {
+    "skill": "JavaScript",
+    "question": "Explain event loop and the difference between microtasks and macrotasks.",
+    "answer": "The event loop processes tasks from queues. Microtasks (Promise callbacks, queueMicrotask) run after the current task and before the next macrotask. Macrotasks (setTimeout, setInterval, I/O) are processed one per event loop tick. Microtasks always have priority.",
+    "category": "concurrency",
+    "difficulty": "hard"
+  },
+  {
+    "skill": "JavaScript",
+    "question": "What is closure in JavaScript?",
+    "answer": "A closure is a function that retains access to its outer scope's variables even after the outer function has returned. Created whenever a function is defined inside another function. Used for data encapsulation and factory functions.",
+    "category": "basics",
+    "difficulty": "medium"
+  },
+  {
+    "skill": "TypeScript",
+    "question": "What is the difference between `interface` and `type` in TypeScript?",
+    "answer": "Both define object shapes, but: interfaces can be extended with `extends` and merged via declaration merging; types support unions, intersections, and mapped types. Prefer interfaces for object shapes and public APIs, types for complex type expressions.",
+    "category": "basics",
+    "difficulty": "medium"
+  },
+  {
+    "skill": "TypeScript",
+    "question": "What are generics in TypeScript and when do you use them?",
+    "answer": "Generics allow writing reusable code that works with multiple types while preserving type safety. Example: `function identity<T>(arg: T): T`. Use them for collections, utilities, and API wrappers where the type depends on the caller.",
+    "category": "advanced",
+    "difficulty": "medium"
+  },
+  {
+    "skill": "TypeScript",
+    "question": "What is the `unknown` type and how does it differ from `any`?",
+    "answer": "`unknown` is a type-safe alternative to `any`. With `unknown`, you must narrow the type (via typeof, instanceof, or type guards) before using it. With `any`, TypeScript skips type checking entirely. Prefer `unknown` for values from external sources.",
+    "category": "advanced",
+    "difficulty": "medium"
+  },
+  {
+    "skill": "React",
+    "question": "What is the difference between controlled and uncontrolled components?",
+    "answer": "Controlled components have their form data managed by React state (value + onChange). Uncontrolled components store their own state internally using refs (via useRef). Controlled components are preferred for validation and programmatic control.",
+    "category": "basics",
+    "difficulty": "easy"
+  },
+  {
+    "skill": "React",
+    "question": "When would you use `useCallback` and `useMemo`?",
+    "answer": "`useCallback` memoizes a function reference to prevent child re-renders when the function is passed as a prop. `useMemo` memoizes an expensive computed value. Use them only when profiling reveals performance issues — premature optimization adds complexity.",
+    "category": "performance",
+    "difficulty": "medium"
+  },
+  {
+    "skill": "React",
+    "question": "Explain the rules of hooks.",
+    "answer": "1) Only call hooks at the top level — not inside conditionals, loops, or nested functions. 2) Only call hooks from React function components or custom hooks. These rules ensure hook state is consistent across renders.",
+    "category": "basics",
+    "difficulty": "easy"
+  },
+  {
+    "skill": "React",
+    "question": "What is reconciliation in React?",
+    "answer": "Reconciliation is React's algorithm for diffing the previous and new virtual DOM to determine the minimal set of real DOM updates needed. React uses keys to identify list items and heuristics (same component type = update, different type = remount) to optimize this process.",
+    "category": "advanced",
+    "difficulty": "hard"
+  },
+  {
+    "skill": "FastAPI",
+    "question": "How does FastAPI handle request validation?",
+    "answer": "FastAPI uses Pydantic models for automatic request body validation. When a request body is declared as a Pydantic model, FastAPI validates incoming JSON against the model's schema, returning a 422 Unprocessable Entity with detailed errors if validation fails.",
+    "category": "basics",
+    "difficulty": "easy"
+  },
+  {
+    "skill": "FastAPI",
+    "question": "What is a dependency in FastAPI and how does the DI system work?",
+    "answer": "Dependencies are callables declared with `Depends()`. FastAPI resolves them before calling the endpoint, caches results within the same request, and handles cleanup of generators (with `yield`). Used for DB sessions, auth, shared logic, and resource management.",
+    "category": "advanced",
+    "difficulty": "medium"
+  },
+  {
+    "skill": "FastAPI",
+    "question": "What is the difference between `async def` and `def` endpoints in FastAPI?",
+    "answer": "Async endpoints run in the event loop and are efficient for I/O-bound operations. Sync endpoints run in a threadpool to avoid blocking the event loop. Use `async def` for async I/O (DB, HTTP calls), and `def` for CPU-bound or sync library code.",
+    "category": "concurrency",
+    "difficulty": "medium"
+  },
+  {
+    "skill": "Docker",
+    "question": "What is the difference between CMD and ENTRYPOINT in a Dockerfile?",
+    "answer": "ENTRYPOINT sets the main command that always runs; CMD provides default arguments that can be overridden at runtime. If both are set, CMD arguments are appended to ENTRYPOINT. Use ENTRYPOINT for the executable and CMD for its default arguments.",
+    "category": "basics",
+    "difficulty": "easy"
+  },
+  {
+    "skill": "Docker",
+    "question": "What is a Docker layer and how does layer caching work?",
+    "answer": "Each Dockerfile instruction creates an immutable layer. Docker caches layers — if a layer and all previous layers are unchanged, Docker reuses the cached version. Order instructions from least to most frequently changed (e.g., COPY requirements.txt before COPY . .) to maximize cache hits.",
+    "category": "optimization",
+    "difficulty": "medium"
+  },
+  {
+    "skill": "Docker",
+    "question": "What is the difference between a Docker volume and a bind mount?",
+    "answer": "Volumes are managed by Docker and stored in Docker's storage area — portable, shareable, and preferred for production data. Bind mounts map a host path directly into the container — useful for development (live code reloading) but tied to host filesystem structure.",
+    "category": "storage",
+    "difficulty": "medium"
+  },
+  {
+    "skill": "SQL",
+    "question": "What is the difference between INNER JOIN, LEFT JOIN, and FULL OUTER JOIN?",
+    "answer": "INNER JOIN returns only rows with matches in both tables. LEFT JOIN returns all rows from the left table plus matching rows from the right (NULLs for no match). FULL OUTER JOIN returns all rows from both tables, with NULLs where there's no match on either side.",
+    "category": "basics",
+    "difficulty": "easy"
+  },
+  {
+    "skill": "SQL",
+    "question": "What is an index and when should you avoid adding one?",
+    "answer": "An index speeds up reads by creating a separate data structure for quick lookups. Avoid indexes on: columns with very low cardinality (e.g., boolean flags), small tables (full scan is faster), and columns written frequently (index maintenance overhead). Over-indexing slows writes.",
+    "category": "performance",
+    "difficulty": "medium"
+  },
+  {
+    "skill": "SQL",
+    "question": "What is the N+1 query problem and how do you fix it?",
+    "answer": "N+1 occurs when you fetch N records then run 1 additional query per record (e.g., fetching users then their posts in a loop). Fix with a JOIN or a single IN query, or use ORM eager loading (`select_related` in Django, `joinedload` in SQLAlchemy).",
+    "category": "performance",
+    "difficulty": "medium"
+  },
+  {
+    "skill": "Git",
+    "question": "What is the difference between `git merge` and `git rebase`?",
+    "answer": "Merge combines branches by creating a merge commit, preserving full history. Rebase moves/replays commits on top of another branch, creating a linear history. Rebase is cleaner for feature branches; never rebase shared/public branches.",
+    "category": "basics",
+    "difficulty": "medium"
+  },
+  {
+    "skill": "Git",
+    "question": "What does `git stash` do and when is it useful?",
+    "answer": "Stash temporarily saves uncommitted changes (working directory and index) so you can switch branches or pull without committing. Run `git stash pop` to reapply. Useful when you need to switch context mid-work without creating a WIP commit.",
+    "category": "workflow",
+    "difficulty": "easy"
+  },
+  {
+    "skill": "Git",
+    "question": "What is a detached HEAD state?",
+    "answer": "Detached HEAD means HEAD points directly to a commit instead of a branch ref. This happens when you checkout a specific commit hash or tag. New commits won't belong to any branch and may be garbage collected. Create a branch (`git checkout -b new-branch`) to preserve them.",
+    "category": "advanced",
+    "difficulty": "medium"
+  }
+]

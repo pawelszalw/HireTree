@@ -11,3 +11,6 @@ python-docx
 bcrypt
 groq
 python-jose[cryptography]
+sqlmodel
+sqlalchemy[asyncio]
+asyncpg

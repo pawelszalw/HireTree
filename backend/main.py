@@ -1,8 +1,11 @@
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Cookie, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,11 +16,21 @@ from providers.gemini import GeminiProvider
 from providers.groq import GroqProvider
 from providers.base import BaseProvider
 from cv_parser import extract_text, anonymize, fingerprint
-from profile_utils import skills_to_compact, load_resumes, save_resumes, load_jobs, save_jobs
+from profile_utils import skills_to_compact
 from auth import hash_password, verify_password, create_access_token, decode_access_token
-import user_store
+from database import get_session, create_tables
+from models import User, Job, Resume
 
-app = FastAPI(title="HireTree API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await create_tables()
+    from seed import seed_questions
+    await seed_questions()
+    yield
+
+
+app = FastAPI(title="HireTree API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -56,7 +69,8 @@ provider = load_provider()
 async def get_current_user(
     request: Request,
     access_token: str | None = Cookie(default=None),
-) -> dict:
+    session: AsyncSession = Depends(get_session),
+) -> User:
     token = access_token
 
     # Fallback: Authorization: Bearer <token> (used by browser extension)
@@ -70,7 +84,8 @@ async def get_current_user(
     user_id = decode_access_token(token)
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    user = user_store.find_by_id(user_id)
+    result = await session.exec(select(User).where(User.id == user_id))
+    user = result.first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return user
@@ -92,27 +107,33 @@ def _skill_defaults(skill: dict) -> dict:
     }
 
 
-def _active_resume(resumes: list) -> dict | None:
-    active = next((r for r in resumes if r.get("is_active")), None)
+def _active_resume(resumes: list[Resume]) -> Resume | None:
+    active = next((r for r in resumes if r.is_active), None)
     return active or (resumes[0] if resumes else None)
 
 
-def _parsed_to_resume(parsed: dict, resumes: list, name: str, source: str, hash_value: str = "") -> dict:
+def _parsed_to_resume(
+    parsed: dict,
+    user_id: str,
+    name: str,
+    source: str,
+    hash_value: str = "",
+    is_first: bool = False,
+) -> Resume:
     skills = [_skill_defaults(s) for s in parsed.get("skills", [])]
-    new_id = max((r["id"] for r in resumes), default=0) + 1
-    return {
-        "id": new_id,
-        "name": name,
-        "is_active": len(resumes) == 0,
-        "skills": skills,
-        "years_experience": parsed.get("years_experience", 0),
-        "current_role": parsed.get("current_role", ""),
-        "summary": parsed.get("summary", ""),
-        "source": source,
-        "refined": False,
-        "hash": hash_value,
-        "uploadedAt": datetime.now(timezone.utc).isoformat(),
-    }
+    return Resume(
+        user_id=user_id,
+        name=name,
+        is_active=is_first,
+        skills=skills,
+        years_experience=parsed.get("years_experience", 0),
+        current_role=parsed.get("current_role", ""),
+        summary=parsed.get("summary", ""),
+        source=source,
+        refined=False,
+        hash=hash_value,
+        uploaded_at=datetime.now(timezone.utc),
+    )
 
 
 def _entries_to_text(entries) -> str:
@@ -141,8 +162,70 @@ def _set_auth_cookie(response: Response, user_id: str) -> None:
     )
 
 
+def _user_public(user: User) -> dict:
+    return {"id": user.id, "email": user.email, "created_at": user.created_at.isoformat()}
+
+
+def _compute_match(job_stack: list, resume_skills: list) -> dict:
+    if not job_stack:
+        return {"match_score": None, "matched": [], "missing": []}
+    resume_names = {s["name"].lower() for s in resume_skills}
+    matched = [t for t in job_stack if t.lower() in resume_names]
+    missing = [t for t in job_stack if t.lower() not in resume_names]
+    return {
+        "match_score": round(len(matched) / len(job_stack) * 100),
+        "matched": matched,
+        "missing": missing,
+    }
+
+
+def _job_to_dict(job: Job, resume_skills: list) -> dict:
+    stack = job.stack or []
+    return {
+        "id": job.id,
+        "url": job.url,
+        "apply_url": job.apply_url,
+        "raw_text": job.raw_text,
+        "status": job.status,
+        "clippedAt": job.clipped_at.isoformat(),
+        "title": job.title,
+        "company": job.company,
+        "location": job.location,
+        "salary": job.salary,
+        "mode": job.mode,
+        "seniority": job.seniority,
+        "contract": job.contract,
+        "stack": stack,
+        "description": job.description,
+        **_compute_match(stack, resume_skills),
+    }
+
+
+def _resume_to_dict(resume: Resume) -> dict:
+    return {
+        "id": resume.id,
+        "name": resume.name,
+        "is_active": resume.is_active,
+        "source": resume.source,
+        "refined": resume.refined,
+        "hash": resume.hash,
+        "years_experience": resume.years_experience,
+        "current_role": resume.current_role,
+        "summary": resume.summary,
+        "uploadedAt": resume.uploaded_at.isoformat(),
+        "skills": resume.skills or [],
+    }
+
+
+async def _get_resume_skills(user_id: str, session: AsyncSession) -> list:
+    result = await session.exec(select(Resume).where(Resume.user_id == user_id))
+    resumes = list(result.all())
+    active = _active_resume(resumes)
+    return (active.skills or []) if active else []
+
+
 # ---------------------------------------------------------------------------
-# Models
+# Models (API request shapes)
 # ---------------------------------------------------------------------------
 
 class AuthPayload(BaseModel):
@@ -199,48 +282,48 @@ VALID_STATUSES = {
 }
 
 
-def _compute_match(job_stack: list, resume_skills: list) -> dict:
-    if not job_stack:
-        return {"match_score": None, "matched": [], "missing": []}
-    resume_names = {s["name"].lower() for s in resume_skills}
-    matched = [t for t in job_stack if t.lower() in resume_names]
-    missing = [t for t in job_stack if t.lower() not in resume_names]
-    return {
-        "match_score": round(len(matched) / len(job_stack) * 100),
-        "matched": matched,
-        "missing": missing,
-    }
-
-
 # ---------------------------------------------------------------------------
 # Auth endpoints
 # ---------------------------------------------------------------------------
 
 @app.post("/api/auth/register", status_code=201)
-async def register(payload: AuthPayload, response: Response):
-    if user_store.find_by_email(payload.email):
+async def register(
+    payload: AuthPayload,
+    response: Response,
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.exec(select(User).where(User.email == payload.email.lower()))
+    if result.first():
         raise HTTPException(status_code=409, detail="Email already registered")
     if len(payload.password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
 
-    user = user_store.create_user(
-        email=payload.email,
+    user = User(
+        email=payload.email.lower().strip(),
         password_hash=hash_password(payload.password),
     )
-    _set_auth_cookie(response, user["id"])
-    print(f"[auth] registered: {user['email']}")
-    return user_store.public(user)
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    _set_auth_cookie(response, user.id)
+    print(f"[auth] registered: {user.email}")
+    return _user_public(user)
 
 
 @app.post("/api/auth/login")
-async def login(payload: AuthPayload, response: Response):
-    user = user_store.find_by_email(payload.email)
-    if not user or not verify_password(payload.password, user["password_hash"]):
+async def login(
+    payload: AuthPayload,
+    response: Response,
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.exec(select(User).where(User.email == payload.email.lower()))
+    user = result.first()
+    if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    _set_auth_cookie(response, user["id"])
-    print(f"[auth] login: {user['email']}")
-    return user_store.public(user)
+    _set_auth_cookie(response, user.id)
+    print(f"[auth] login: {user.email}")
+    return _user_public(user)
 
 
 @app.post("/api/auth/logout")
@@ -250,8 +333,8 @@ async def logout(response: Response):
 
 
 @app.get("/api/auth/me")
-async def me(current_user: dict = Depends(get_current_user)):
-    return user_store.public(current_user)
+async def me(current_user: User = Depends(get_current_user)):
+    return _user_public(current_user)
 
 
 # ---------------------------------------------------------------------------
@@ -259,7 +342,11 @@ async def me(current_user: dict = Depends(get_current_user)):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/clip", status_code=201)
-async def clip(payload: ClipPayload, current_user: dict = Depends(get_current_user)):
+async def clip(
+    payload: ClipPayload,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
     if not payload.raw_text.strip():
         raise HTTPException(status_code=400, detail="raw_text is required")
 
@@ -281,106 +368,147 @@ async def clip(payload: ClipPayload, current_user: dict = Depends(get_current_us
         print(f"[clip] rejected — not a job offer | url: {payload.url}")
         return {"received": False, "is_job_offer": False}
 
-    jobs = load_jobs(current_user["id"])
-
     if payload.url:
-        existing = next((j for j in jobs if j.get("url") == payload.url), None)
+        dup_result = await session.exec(
+            select(Job).where(Job.user_id == current_user.id, Job.url == payload.url)
+        )
+        existing = dup_result.first()
         if existing:
-            print(f"[clip] duplicate url — existing id: {existing['id']}")
-            return {"received": True, "duplicate": True, "id": existing["id"]}
+            print(f"[clip] duplicate url — existing id: {existing.id}")
+            return {"received": True, "duplicate": True, "id": existing.id}
 
-    job = {
-        "id": max((j["id"] for j in jobs), default=0) + 1,
-        "url": payload.url,
-        "apply_url": payload.apply_url,
-        "raw_text": payload.raw_text,
-        "status": "saved",
-        "clippedAt": datetime.now(timezone.utc).isoformat(),
-        **parsed,
-    }
-    jobs.append(job)
-    save_jobs(current_user["id"], jobs)
-    print(f"[clip] saved — id: {job['id']} | title: {job['title']}")
-    return {"received": True, "id": job["id"]}
+    job = Job(
+        user_id=current_user.id,
+        url=payload.url,
+        apply_url=payload.apply_url,
+        raw_text=payload.raw_text,
+        status="saved",
+        clipped_at=datetime.now(timezone.utc),
+        title=parsed.get("title", ""),
+        company=parsed.get("company", ""),
+        location=parsed.get("location", ""),
+        salary=parsed.get("salary", ""),
+        mode=parsed.get("mode", ""),
+        seniority=parsed.get("seniority", ""),
+        contract=parsed.get("contract", ""),
+        stack=parsed.get("stack", []),
+        description=parsed.get("description", ""),
+    )
+    session.add(job)
+    await session.commit()
+    await session.refresh(job)
+    print(f"[clip] saved — id: {job.id} | title: {job.title}")
+    return {"received": True, "id": job.id}
 
 
 @app.get("/api/jobs")
-async def get_jobs(current_user: dict = Depends(get_current_user)):
-    jobs = load_jobs(current_user["id"])
-    resumes = load_resumes(current_user["id"])
-    active = _active_resume(resumes)
-    resume_skills = active.get("skills", []) if active else []
-    return [
-        {**job, **_compute_match(job.get("stack", []), resume_skills)}
-        for job in jobs
-    ]
+async def get_jobs(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.exec(select(Job).where(Job.user_id == current_user.id))
+    jobs = list(result.all())
+    resume_skills = await _get_resume_skills(current_user.id, session)
+    return [_job_to_dict(job, resume_skills) for job in jobs]
 
 
 @app.get("/api/jobs/{job_id}")
-async def get_job(job_id: int, current_user: dict = Depends(get_current_user)):
-    jobs = load_jobs(current_user["id"])
-    job = next((j for j in jobs if j["id"] == job_id), None)
+async def get_job(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.exec(
+        select(Job).where(Job.id == job_id, Job.user_id == current_user.id)
+    )
+    job = result.first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    resumes = load_resumes(current_user["id"])
-    active = _active_resume(resumes)
-    resume_skills = active.get("skills", []) if active else []
-    return {**job, **_compute_match(job.get("stack", []), resume_skills)}
+    resume_skills = await _get_resume_skills(current_user.id, session)
+    return _job_to_dict(job, resume_skills)
 
 
 @app.post("/api/jobs/{job_id}/reparse")
-async def reparse_job(job_id: int, current_user: dict = Depends(get_current_user)):
-    jobs = load_jobs(current_user["id"])
-    job = next((j for j in jobs if j["id"] == job_id), None)
+async def reparse_job(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.exec(
+        select(Job).where(Job.id == job_id, Job.user_id == current_user.id)
+    )
+    job = result.first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    raw_text = job.get("raw_text", "")
-    if not raw_text.strip():
-        raise HTTPException(status_code=400, detail="No raw text stored for this job — re-clip it from the extension.")
+    if not job.raw_text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="No raw text stored for this job — re-clip it from the extension.",
+        )
 
-    print(f"[reparse] job_id: {job_id} | text_len: {len(raw_text)}")
+    print(f"[reparse] job_id: {job_id} | text_len: {len(job.raw_text)}")
     try:
-        parsed = await provider.parse_job(raw_text)
+        parsed = await provider.parse_job(job.raw_text)
         print(f"[reparse] AI ok | title: {parsed.get('title')} | stack: {parsed.get('stack')}")
     except Exception as err:
         print(f"[reparse] AI failed: {err}")
         raise HTTPException(status_code=502, detail=f"AI parsing failed: {err}")
 
-    job.update({k: v for k, v in parsed.items() if k != "is_job_offer"})
-    save_jobs(current_user["id"], jobs)
+    job.title = parsed.get("title", job.title)
+    job.company = parsed.get("company", job.company)
+    job.location = parsed.get("location", job.location)
+    job.salary = parsed.get("salary", job.salary)
+    job.mode = parsed.get("mode", job.mode)
+    job.seniority = parsed.get("seniority", job.seniority)
+    job.contract = parsed.get("contract", job.contract)
+    job.stack = parsed.get("stack", job.stack)
+    job.description = parsed.get("description", job.description)
+    await session.commit()
 
-    resumes = load_resumes(current_user["id"])
-    active = _active_resume(resumes)
-    resume_skills = active.get("skills", []) if active else []
-    return {**job, **_compute_match(job.get("stack", []), resume_skills)}
+    resume_skills = await _get_resume_skills(current_user.id, session)
+    return _job_to_dict(job, resume_skills)
 
 
 @app.delete("/api/jobs/{job_id}", status_code=204)
-async def delete_job(job_id: int, current_user: dict = Depends(get_current_user)):
-    jobs = load_jobs(current_user["id"])
-    idx = next((i for i, j in enumerate(jobs) if j["id"] == job_id), None)
-    if idx is None:
+async def delete_job(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.exec(
+        select(Job).where(Job.id == job_id, Job.user_id == current_user.id)
+    )
+    job = result.first()
+    if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    jobs.pop(idx)
-    save_jobs(current_user["id"], jobs)
+    await session.delete(job)
+    await session.commit()
     print(f"[jobs] deleted — id: {job_id}")
 
 
 @app.patch("/api/jobs/{job_id}")
-async def patch_job(job_id: int, patch: JobPatch, current_user: dict = Depends(get_current_user)):
-    jobs = load_jobs(current_user["id"])
-    job = next((j for j in jobs if j["id"] == job_id), None)
+async def patch_job(
+    job_id: int,
+    patch: JobPatch,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.exec(
+        select(Job).where(Job.id == job_id, Job.user_id == current_user.id)
+    )
+    job = result.first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     if patch.status is not None:
         if patch.status not in VALID_STATUSES:
             raise HTTPException(status_code=400, detail=f"Invalid status: {patch.status}")
-        job["status"] = patch.status
+        job.status = patch.status
     if patch.apply_url is not None:
-        job["apply_url"] = patch.apply_url
-    save_jobs(current_user["id"], jobs)
-    return job
+        job.apply_url = patch.apply_url
+    await session.commit()
+    resume_skills = await _get_resume_skills(current_user.id, session)
+    return _job_to_dict(job, resume_skills)
 
 
 # ---------------------------------------------------------------------------
@@ -388,15 +516,20 @@ async def patch_job(job_id: int, patch: JobPatch, current_user: dict = Depends(g
 # ---------------------------------------------------------------------------
 
 @app.get("/api/resumes")
-async def get_resumes(current_user: dict = Depends(get_current_user)):
-    return load_resumes(current_user["id"])
+async def get_resumes(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.exec(select(Resume).where(Resume.user_id == current_user.id))
+    return [_resume_to_dict(r) for r in result.all()]
 
 
 @app.post("/api/resumes", status_code=201)
 async def create_resume(
     file: UploadFile = File(...),
     name: str = Form("My Resume"),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
 ):
     try:
         raw_text = await extract_text(file)
@@ -405,11 +538,13 @@ async def create_resume(
 
     anonymized = anonymize(raw_text)
     fp = fingerprint(anonymized)
-    resumes = load_resumes(current_user["id"])
 
-    cached = next((r for r in resumes if r.get("hash") == fp), None)
+    cached_result = await session.exec(
+        select(Resume).where(Resume.user_id == current_user.id, Resume.hash == fp)
+    )
+    cached = cached_result.first()
     if cached:
-        return {**cached, "cached": True}
+        return {**_resume_to_dict(cached), "cached": True}
 
     try:
         parsed = await provider.parse_cv(anonymized)
@@ -417,17 +552,28 @@ async def create_resume(
         print(f"[resumes] AI failed: {err}")
         parsed = {"skills": [], "years_experience": 0, "current_role": "", "summary": ""}
 
-    resume = _parsed_to_resume(parsed, resumes, name=name.strip() or "My Resume", source="cv", hash_value=fp)
-    resumes.append(resume)
-    save_resumes(current_user["id"], resumes)
-    print(f"[resumes] created — id: {resume['id']} | name: {resume['name']}")
-    return {**resume, "cached": False}
+    count_result = await session.exec(select(Resume).where(Resume.user_id == current_user.id))
+    is_first = len(list(count_result.all())) == 0
+
+    resume = _parsed_to_resume(
+        parsed, current_user.id,
+        name=name.strip() or "My Resume",
+        source="cv",
+        hash_value=fp,
+        is_first=is_first,
+    )
+    session.add(resume)
+    await session.commit()
+    await session.refresh(resume)
+    print(f"[resumes] created — id: {resume.id} | name: {resume.name}")
+    return {**_resume_to_dict(resume), "cached": False}
 
 
 @app.post("/api/resumes/manual", status_code=201)
 async def create_resume_manual(
     payload: CreateManualResumePayload,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
 ):
     if not payload.entries:
         raise HTTPException(status_code=400, detail="At least one work history entry is required")
@@ -439,49 +585,74 @@ async def create_resume_manual(
         print(f"[resumes/manual] AI failed: {err}")
         parsed = {"skills": [], "years_experience": 0, "current_role": "", "summary": ""}
 
-    resumes = load_resumes(current_user["id"])
-    resume = _parsed_to_resume(parsed, resumes, name=payload.name.strip() or "My Resume", source="manual")
-    resumes.append(resume)
-    save_resumes(current_user["id"], resumes)
-    print(f"[resumes/manual] created — id: {resume['id']} | name: {resume['name']}")
-    return resume
+    count_result = await session.exec(select(Resume).where(Resume.user_id == current_user.id))
+    is_first = len(list(count_result.all())) == 0
+
+    resume = _parsed_to_resume(
+        parsed, current_user.id,
+        name=payload.name.strip() or "My Resume",
+        source="manual",
+        is_first=is_first,
+    )
+    session.add(resume)
+    await session.commit()
+    await session.refresh(resume)
+    print(f"[resumes/manual] created — id: {resume.id} | name: {resume.name}")
+    return _resume_to_dict(resume)
 
 
 @app.patch("/api/resumes/{resume_id}")
 async def patch_resume(
     resume_id: int,
     patch: ResumePatch,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
 ):
-    resumes = load_resumes(current_user["id"])
-    resume = next((r for r in resumes if r["id"] == resume_id), None)
+    result = await session.exec(
+        select(Resume).where(Resume.id == resume_id, Resume.user_id == current_user.id)
+    )
+    resume = result.first()
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
 
     if patch.name is not None:
-        resume["name"] = patch.name.strip() or resume["name"]
+        resume.name = patch.name.strip() or resume.name
     if patch.is_active is True:
-        for r in resumes:
-            r["is_active"] = False
-        resume["is_active"] = True
-
-    save_resumes(current_user["id"], resumes)
-    return resume
+        all_result = await session.exec(
+            select(Resume).where(Resume.user_id == current_user.id)
+        )
+        for r in all_result.all():
+            r.is_active = (r.id == resume_id)
+    await session.commit()
+    await session.refresh(resume)
+    return _resume_to_dict(resume)
 
 
 @app.delete("/api/resumes/{resume_id}", status_code=204)
-async def delete_resume(resume_id: int, current_user: dict = Depends(get_current_user)):
-    resumes = load_resumes(current_user["id"])
-    idx = next((i for i, r in enumerate(resumes) if r["id"] == resume_id), None)
-    if idx is None:
+async def delete_resume(
+    resume_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.exec(
+        select(Resume).where(Resume.id == resume_id, Resume.user_id == current_user.id)
+    )
+    resume = result.first()
+    if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
 
-    was_active = resumes[idx].get("is_active", False)
-    resumes.pop(idx)
-    if was_active and resumes:
-        resumes[0]["is_active"] = True
+    was_active = resume.is_active
+    await session.delete(resume)
+    await session.commit()
 
-    save_resumes(current_user["id"], resumes)
+    if was_active:
+        remaining_result = await session.exec(
+            select(Resume).where(Resume.user_id == current_user.id)
+        )
+        first = remaining_result.first()
+        if first:
+            first.is_active = True
+            await session.commit()
 
 
 @app.patch("/api/resumes/{resume_id}/skills/{skill_name}")
@@ -489,29 +660,38 @@ async def patch_resume_skill(
     resume_id: int,
     skill_name: str,
     patch: SkillPatch,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
 ):
-    resumes = load_resumes(current_user["id"])
-    resume = next((r for r in resumes if r["id"] == resume_id), None)
+    result = await session.exec(
+        select(Resume).where(Resume.id == resume_id, Resume.user_id == current_user.id)
+    )
+    resume = result.first()
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
 
-    skill = next(
-        (s for s in resume.get("skills", []) if s["name"].lower() == skill_name.lower()),
-        None,
-    )
-    if not skill:
+    skills = resume.skills or []
+    if not any(s["name"].lower() == skill_name.lower() for s in skills):
         raise HTTPException(status_code=404, detail=f"Skill '{skill_name}' not found")
 
-    if patch.user_rating is not None:
-        if not 1 <= patch.user_rating <= 5:
-            raise HTTPException(status_code=400, detail="user_rating must be between 1 and 5")
-        skill["user_rating"] = patch.user_rating
-    if patch.note is not None:
-        skill["note"] = patch.note
+    if patch.user_rating is not None and not 1 <= patch.user_rating <= 5:
+        raise HTTPException(status_code=400, detail="user_rating must be between 1 and 5")
 
-    save_resumes(current_user["id"], resumes)
-    return skill
+    updated_skill = None
+    new_skills = []
+    for s in skills:
+        if s["name"].lower() == skill_name.lower():
+            s = dict(s)
+            if patch.user_rating is not None:
+                s["user_rating"] = patch.user_rating
+            if patch.note is not None:
+                s["note"] = patch.note
+            updated_skill = s
+        new_skills.append(s)
+
+    resume.skills = new_skills  # full reassignment — required for JSONB change tracking
+    await session.commit()
+    return updated_skill
 
 
 # ---------------------------------------------------------------------------
@@ -519,7 +699,11 @@ async def patch_resume_skill(
 # ---------------------------------------------------------------------------
 
 @app.post("/api/cv", status_code=201)
-async def upload_cv(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+async def upload_cv(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
     try:
         raw_text = await extract_text(file)
     except ValueError as err:
@@ -527,11 +711,13 @@ async def upload_cv(file: UploadFile = File(...), current_user: dict = Depends(g
 
     anonymized = anonymize(raw_text)
     fp = fingerprint(anonymized)
-    resumes = load_resumes(current_user["id"])
 
-    cached = next((r for r in resumes if r.get("hash") == fp), None)
+    cached_result = await session.exec(
+        select(Resume).where(Resume.user_id == current_user.id, Resume.hash == fp)
+    )
+    cached = cached_result.first()
     if cached:
-        return {**cached, "cached": True}
+        return {**_resume_to_dict(cached), "cached": True}
 
     try:
         parsed = await provider.parse_cv(anonymized)
@@ -539,26 +725,41 @@ async def upload_cv(file: UploadFile = File(...), current_user: dict = Depends(g
         print(f"[cv] AI failed: {err}")
         parsed = {"skills": [], "years_experience": 0, "current_role": "", "summary": ""}
 
+    count_result = await session.exec(select(Resume).where(Resume.user_id == current_user.id))
+    is_first = len(list(count_result.all())) == 0
+
     name = (file.filename or "CV Upload").rsplit(".", 1)[0]
-    resume = _parsed_to_resume(parsed, resumes, name=name, source="cv", hash_value=fp)
-    resumes.append(resume)
-    save_resumes(current_user["id"], resumes)
-    return {**resume, "cached": False}
+    resume = _parsed_to_resume(
+        parsed, current_user.id,
+        name=name,
+        source="cv",
+        hash_value=fp,
+        is_first=is_first,
+    )
+    session.add(resume)
+    await session.commit()
+    await session.refresh(resume)
+    return {**_resume_to_dict(resume), "cached": False}
 
 
 @app.get("/api/cv")
-async def get_cv(current_user: dict = Depends(get_current_user)):
-    resumes = load_resumes(current_user["id"])
+async def get_cv(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.exec(select(Resume).where(Resume.user_id == current_user.id))
+    resumes = list(result.all())
     active = _active_resume(resumes)
     if not active:
         raise HTTPException(status_code=404, detail="No CV uploaded yet")
-    return active
+    return _resume_to_dict(active)
 
 
 @app.post("/api/profile/manual", status_code=201)
 async def build_manual_profile(
     payload: ManualProfilePayload,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
 ):
     if not payload.entries:
         raise HTTPException(status_code=400, detail="At least one work history entry is required")
@@ -570,67 +771,85 @@ async def build_manual_profile(
         print(f"[profile/manual] AI failed: {err}")
         parsed = {"skills": [], "years_experience": 0, "current_role": "", "summary": ""}
 
-    resumes = load_resumes(current_user["id"])
-    resume = _parsed_to_resume(parsed, resumes, name="Manual Profile", source="manual")
-    resumes.append(resume)
-    save_resumes(current_user["id"], resumes)
-    return resume
+    count_result = await session.exec(select(Resume).where(Resume.user_id == current_user.id))
+    is_first = len(list(count_result.all())) == 0
+
+    resume = _parsed_to_resume(
+        parsed, current_user.id,
+        name="Manual Profile",
+        source="manual",
+        is_first=is_first,
+    )
+    session.add(resume)
+    await session.commit()
+    await session.refresh(resume)
+    return _resume_to_dict(resume)
 
 
 @app.post("/api/profile/refine")
 async def refine_profile(
     payload: RefinePayload,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
 ):
-    resumes = load_resumes(current_user["id"])
+    resumes_result = await session.exec(select(Resume).where(Resume.user_id == current_user.id))
+    resumes = list(resumes_result.all())
     active = _active_resume(resumes)
     if not active:
         raise HTTPException(status_code=404, detail="No profile to refine.")
-    if active.get("refined"):
+    if active.refined:
         raise HTTPException(status_code=400, detail="Profile already refined.")
     if not payload.entries:
         raise HTTPException(status_code=400, detail="At least one work history entry is required")
 
-    compact = skills_to_compact(active.get("skills", []))
+    compact = skills_to_compact(active.skills or [])
     entries_text = _entries_to_text(payload.entries)
 
     try:
-        result = await provider.refine_profile(compact, entries_text)
-        updated_skills = [_skill_defaults(s) for s in result.get("skills", [])]
+        ai_result = await provider.refine_profile(compact, entries_text)
+        updated_skills = [_skill_defaults(s) for s in ai_result.get("skills", [])]
     except Exception as err:
         print(f"[profile/refine] AI failed: {err}")
-        updated_skills = active.get("skills", [])
+        updated_skills = active.skills or []
 
-    active["skills"] = updated_skills
-    active["refined"] = True
-    save_resumes(current_user["id"], resumes)
-    return active
+    active.skills = updated_skills  # full reassignment for JSONB change tracking
+    active.refined = True
+    await session.commit()
+    return _resume_to_dict(active)
 
 
 @app.patch("/api/cv/skills/{skill_name}")
 async def patch_skill(
     skill_name: str,
     patch: SkillPatch,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
 ):
-    resumes = load_resumes(current_user["id"])
+    resumes_result = await session.exec(select(Resume).where(Resume.user_id == current_user.id))
+    resumes = list(resumes_result.all())
     active = _active_resume(resumes)
     if not active:
         raise HTTPException(status_code=404, detail="No profile found")
 
-    skill = next(
-        (s for s in active.get("skills", []) if s["name"].lower() == skill_name.lower()),
-        None,
-    )
-    if not skill:
+    skills = active.skills or []
+    if not any(s["name"].lower() == skill_name.lower() for s in skills):
         raise HTTPException(status_code=404, detail=f"Skill '{skill_name}' not found")
 
-    if patch.user_rating is not None:
-        if not 1 <= patch.user_rating <= 5:
-            raise HTTPException(status_code=400, detail="user_rating must be between 1 and 5")
-        skill["user_rating"] = patch.user_rating
-    if patch.note is not None:
-        skill["note"] = patch.note
+    if patch.user_rating is not None and not 1 <= patch.user_rating <= 5:
+        raise HTTPException(status_code=400, detail="user_rating must be between 1 and 5")
 
-    save_resumes(current_user["id"], resumes)
-    return skill
+    updated_skill = None
+    new_skills = []
+    for s in skills:
+        if s["name"].lower() == skill_name.lower():
+            s = dict(s)
+            if patch.user_rating is not None:
+                s["user_rating"] = patch.user_rating
+            if patch.note is not None:
+                s["note"] = patch.note
+            updated_skill = s
+        new_skills.append(s)
+
+    active.skills = new_skills  # full reassignment for JSONB change tracking
+    await session.commit()
+    return updated_skill
