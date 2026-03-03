@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import KanbanColumn from '../components/KanbanColumn'
 import ContextMenu from '../components/ContextMenu'
 import { fetchJobs, updateJobStatus } from '../api/clip'
+import { useJobClipListener } from '../hooks/useJobClipListener'
 
 const ACTIVE_COLUMNS = ['saved', 'applied', 'need_prep', 'interview', 'offer']
 const ARCHIVED_STATUSES = ['rejected', 'closed', 'accepted']
@@ -40,6 +41,7 @@ export default function Pipeline() {
   useEffect(() => {
     fetchJobs().then(setJobs).catch(() => {})
   }, [])
+  useJobClipListener(setJobs)
 
   const moveJob = useCallback(async (jobId, newStatus) => {
     setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: newStatus } : j))

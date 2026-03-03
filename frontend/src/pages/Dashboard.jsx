@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, Link } from 'react-router-dom'
 import ResumeBanner from '../components/ResumeBanner'
 import { fetchJobs, fetchCV } from '../api/clip'
+import { useJobClipListener } from '../hooks/useJobClipListener'
 
 const PIPELINE_STAGES = ['saved', 'applied', 'need_prep', 'interview', 'offer']
 
@@ -16,6 +17,7 @@ export default function Dashboard() {
     fetchJobs().then(setJobs).catch(() => {})
     fetchCV().then(data => setHasCV(!!data)).catch(() => setHasCV(false))
   }, [])
+  useJobClipListener(setJobs)
 
   const counts = PIPELINE_STAGES.reduce((acc, stage) => {
     acc[stage] = jobs.filter(j => j.status === stage).length
