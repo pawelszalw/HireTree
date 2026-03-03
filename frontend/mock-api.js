@@ -27,7 +27,7 @@ export function mockApiPlugin() {
   return {
     name: 'mock-api',
     configureServer(server) {
-      console.log('[mock-api] ready — POST /api/clip  GET /api/jobs  GET /api/auth/me')
+      console.log('[mock-api] ready — POST /api/clip  GET|PATCH|DELETE /api/jobs/:id  POST /api/jobs/:id/reparse  GET /api/auth/me')
 
       // Handle CORS preflight from browser extension
       server.middlewares.use('/api', (req, res, next) => {
@@ -72,6 +72,7 @@ export function mockApiPlugin() {
           const job = {
             id:          Date.now(),
             url:         payload.url ?? '',
+            apply_url:   payload.apply_url ?? '',
             raw_text:    payload.raw_text ?? '',
             title:       payload.url ?? 'Untitled',
             company:     '',
@@ -97,30 +98,50 @@ export function mockApiPlugin() {
         }
       })
 
-      // GET /api/jobs — return all clipped jobs
-      // PATCH /api/jobs/:id — update a job's status
+      // /api/jobs — list, get, patch, delete, reparse
       server.middlewares.use('/api/jobs', async (req, res) => {
-        const idMatch = req.url?.match(/^\/(\d+)\/?$/)
+        const idMatch     = req.url?.match(/^\/(\d+)\/?$/)
+        const reparseMatch = req.url?.match(/^\/(\d+)\/reparse\/?$/)
 
-        if (!idMatch) {
+        // GET /api/jobs
+        if (!idMatch && !reparseMatch) {
           if (req.method !== 'GET') return json(res, { error: 'Method not allowed' }, 405)
           return json(res, jobs)
         }
 
-        const id = parseInt(idMatch[1])
+        const id  = parseInt((idMatch ?? reparseMatch)[1])
         const job = jobs.find(j => j.id === id)
         if (!job) return json(res, { error: 'Not found' }, 404)
 
+        // GET /api/jobs/:id
         if (req.method === 'GET') return json(res, job)
 
+        // PATCH /api/jobs/:id — update status and/or apply_url
         if (req.method === 'PATCH') {
           try {
             const patch = await readBody(req)
-            if (patch.status !== undefined) job.status = patch.status
+            if (patch.status    !== undefined) job.status    = patch.status
+            if (patch.apply_url !== undefined) job.apply_url = patch.apply_url
             return json(res, job)
           } catch (err) {
             return json(res, { error: err.message }, 400)
           }
+        }
+
+        // DELETE /api/jobs/:id
+        if (req.method === 'DELETE') {
+          const idx = jobs.findIndex(j => j.id === id)
+          jobs.splice(idx, 1)
+          console.log(`[mock-api] deleted job ${id} — total: ${jobs.length}`)
+          res.statusCode = 204
+          res.end()
+          return
+        }
+
+        // POST /api/jobs/:id/reparse — no AI in mock, return job unchanged
+        if (req.method === 'POST' && reparseMatch) {
+          console.log(`[mock-api] reparse job ${id} — returning as-is (no AI in mock)`)
+          return json(res, job)
         }
 
         json(res, { error: 'Method not allowed' }, 405)
