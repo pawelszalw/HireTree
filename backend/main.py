@@ -1,4 +1,5 @@
 import os
+import random
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Cookie, Response, Request
@@ -6,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy import func
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,7 +21,7 @@ from cv_parser import extract_text, anonymize, fingerprint
 from profile_utils import skills_to_compact
 from auth import hash_password, verify_password, create_access_token, decode_access_token
 from database import get_session, create_tables
-from models import User, Job, Resume
+from models import User, Job, Resume, Question, InterviewSession
 
 
 @asynccontextmanager
@@ -853,3 +855,112 @@ async def patch_skill(
     active.skills = new_skills  # full reassignment for JSONB change tracking
     await session.commit()
     return updated_skill
+
+
+# ---------------------------------------------------------------------------
+# Interview Simulator endpoint
+# ---------------------------------------------------------------------------
+
+MAX_INTERVIEW_QUESTIONS = 10
+
+_SENIORITY_DIFFICULTIES: dict[str, set[str]] = {
+    "junior": {"easy", "medium"},
+    "jr":     {"easy", "medium"},
+    "entry":  {"easy", "medium"},
+    "intern": {"easy", "medium"},
+    "senior": {"medium", "hard"},
+    "sr":     {"medium", "hard"},
+    "lead":   {"medium", "hard"},
+    "staff":  {"medium", "hard"},
+    "principal": {"medium", "hard"},
+    "expert": {"medium", "hard"},
+}
+
+
+def _difficulty_filter(seniority: str) -> set[str] | None:
+    """Return allowed difficulties for a seniority label, or None = all."""
+    s = seniority.lower()
+    for keyword, levels in _SENIORITY_DIFFICULTIES.items():
+        if keyword in s:
+            return levels
+    return None  # mid / unrecognised → all difficulties
+
+
+@app.get("/api/jobs/{job_id}/interview")
+async def get_interview(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    job_result = await session.exec(
+        select(Job).where(Job.id == job_id, Job.user_id == current_user.id)
+    )
+    job = job_result.first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    stack_lower = [s.lower() for s in (job.stack or [])]
+    allowed_difficulties = _difficulty_filter(job.seniority or "")
+
+    # --- Questions matching the job's stack ---
+    questions: list[Question] = []
+    if stack_lower:
+        q_result = await session.exec(
+            select(Question).where(func.lower(Question.skill).in_(stack_lower))
+        )
+        candidates = list(q_result.all())
+        if allowed_difficulties:
+            filtered = [q for q in candidates if q.difficulty in allowed_difficulties]
+            questions = filtered if filtered else candidates  # relax if nothing matches
+        else:
+            questions = candidates
+
+    # --- Supplement with unrelated questions if we need more ---
+    if len(questions) < MAX_INTERVIEW_QUESTIONS:
+        existing_ids = [q.id for q in questions]
+        if existing_ids:
+            fill_result = await session.exec(
+                select(Question).where(Question.id.notin_(existing_ids))
+            )
+        else:
+            fill_result = await session.exec(select(Question))
+        fill = list(fill_result.all())
+        random.shuffle(fill)
+        questions += fill[: MAX_INTERVIEW_QUESTIONS - len(questions)]
+
+    if not questions:
+        raise HTTPException(
+            status_code=404,
+            detail="No questions available. Run the seed script to populate the question bank.",
+        )
+
+    random.shuffle(questions)
+    questions = questions[:MAX_INTERVIEW_QUESTIONS]
+
+    interview = InterviewSession(
+        user_id=current_user.id,
+        job_id=job_id,
+        question_ids=[q.id for q in questions],
+    )
+    session.add(interview)
+    await session.commit()
+    await session.refresh(interview)
+
+    return {
+        "session_id": interview.id,
+        "job_title": job.title,
+        "company": job.company,
+        "seniority": job.seniority,
+        "total": len(questions),
+        "questions": [
+            {
+                "id": q.id,
+                "skill": q.skill,
+                "question": q.question,
+                "answer": q.answer,
+                "category": q.category,
+                "difficulty": q.difficulty,
+            }
+            for q in questions
+        ],
+    }

@@ -86,7 +86,28 @@
   "interviewSimulator": {
     "title": "Symulator rozmowy",
     "description": "Wybierz ofertę, aby rozpocząć sesję pytań rekrutacyjnych.",
-    "button": "Wybierz ofertę"
+    "button": "Wybierz ofertę",
+    "loading": "Przygotowuję sesję...",
+    "pickJob": "Wybierz ofertę pracy, aby zacząć",
+    "pickJobHint": "Otwórz dowolną ofertę i kliknij „Symuluj rozmowę".",
+    "browseJobs": "Przeglądaj oferty",
+    "question": "Pytanie {{current}} z {{total}}",
+    "revealAnswer": "Pokaż odpowiedź",
+    "next": "Następne",
+    "prev": "Poprzednie",
+    "selfAssessment": "Jak Ci poszło?",
+    "knew": "Wiedziałem",
+    "unsure": "Nie byłem pewny",
+    "missed": "Nie wiedziałem",
+    "done": "Sesja zakończona",
+    "doneSubtitle": "Przejrzano {{total}} pytań.",
+    "restart": "Zacznij od nowa",
+    "backToJobs": "Wróć do ofert",
+    "difficulty": {
+      "easy": "Łatwe",
+      "medium": "Średnie",
+      "hard": "Trudne"
+    }
   },
   "learningSimulator": {
     "title": "Symulator nauki",

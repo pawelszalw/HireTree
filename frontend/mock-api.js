@@ -98,13 +98,36 @@ export function mockApiPlugin() {
         }
       })
 
-      // /api/jobs — list, get, patch, delete, reparse
+      // /api/jobs — list, get, patch, delete, reparse, interview
       server.middlewares.use('/api/jobs', async (req, res) => {
-        const idMatch     = req.url?.match(/^\/(\d+)\/?$/)
-        const reparseMatch = req.url?.match(/^\/(\d+)\/reparse\/?$/)
+        const idMatch        = req.url?.match(/^\/(\d+)\/?$/)
+        const reparseMatch   = req.url?.match(/^\/(\d+)\/reparse\/?$/)
+        const interviewMatch = req.url?.match(/^\/(\d+)\/interview\/?$/)
+
+        // GET /api/jobs/:id/interview
+        if (req.method === 'GET' && interviewMatch) {
+          const id  = parseInt(interviewMatch[1])
+          const job = jobs.find(j => j.id === id)
+          if (!job) return json(res, { detail: 'Not found' }, 404)
+          const mockQuestions = [
+            { id: 1, skill: 'JavaScript', question: 'What is the difference between `==` and `===`?', answer: '`==` coerces types before comparing; `===` checks both value and type. Always prefer `===`.', category: 'basics', difficulty: 'easy' },
+            { id: 2, skill: 'JavaScript', question: 'Explain event loop and microtasks vs macrotasks.', answer: 'Microtasks (Promise callbacks) run after the current task and before the next macrotask (setTimeout, I/O). The event loop processes one macrotask, then drains the microtask queue.', category: 'concurrency', difficulty: 'hard' },
+            { id: 3, skill: 'React',      question: 'What is the difference between controlled and uncontrolled components?', answer: 'Controlled: React state drives the value (value + onChange). Uncontrolled: the DOM manages its own state, accessed via refs.', category: 'basics', difficulty: 'easy' },
+            { id: 4, skill: 'React',      question: 'When would you use useCallback and useMemo?', answer: 'useCallback memoises a function reference to prevent child re-renders. useMemo memoises an expensive computed value. Use only when profiling shows a real issue.', category: 'performance', difficulty: 'medium' },
+            { id: 5, skill: 'Git',        question: 'What is the difference between `git merge` and `git rebase`?', answer: 'Merge preserves history with a merge commit. Rebase replays commits on top of another branch for a linear history. Never rebase shared branches.', category: 'workflow', difficulty: 'medium' },
+          ]
+          return json(res, {
+            session_id: 1,
+            job_title:  job.title  || 'Mock Job',
+            company:    job.company || 'Mock Company',
+            seniority:  job.seniority || '',
+            total:      mockQuestions.length,
+            questions:  mockQuestions,
+          })
+        }
 
         // GET /api/jobs
-        if (!idMatch && !reparseMatch) {
+        if (!idMatch && !reparseMatch && !interviewMatch) {
           if (req.method !== 'GET') return json(res, { error: 'Method not allowed' }, 405)
           return json(res, jobs)
         }

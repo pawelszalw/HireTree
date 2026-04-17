@@ -381,7 +381,7 @@ export default function JobDetail() {
               {reparsing ? t('jobDetail.reparsing') : t('jobDetail.reparse')}
             </button>
             <button
-              onClick={() => navigate('/simulator')}
+              onClick={() => navigate(`/simulator?job=${job.id}`)}
               className="text-sm bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-colors"
             >
               {t('jobDetail.simulate')}

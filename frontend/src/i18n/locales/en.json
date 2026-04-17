@@ -86,7 +86,28 @@
   "interviewSimulator": {
     "title": "Interview Simulator",
     "description": "Select a job offer to start a recruitment Q&A session.",
-    "button": "Select an offer"
+    "button": "Select an offer",
+    "loading": "Preparing your session...",
+    "pickJob": "Select a job offer to start",
+    "pickJobHint": "Open any saved job and click \"Simulate interview\".",
+    "browseJobs": "Browse job offers",
+    "question": "Question {{current}} of {{total}}",
+    "revealAnswer": "Reveal answer",
+    "next": "Next",
+    "prev": "Previous",
+    "selfAssessment": "How did you do?",
+    "knew": "Got it",
+    "unsure": "Not sure",
+    "missed": "Missed it",
+    "done": "Session complete",
+    "doneSubtitle": "You've reviewed all {{total}} questions.",
+    "restart": "Start over",
+    "backToJobs": "Back to jobs",
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
+    }
   },
   "learningSimulator": {
     "title": "Learning Simulator",
