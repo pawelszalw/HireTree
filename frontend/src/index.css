@@ -1,1 +1,29 @@
 @import "tailwindcss";
+
+@theme {
+  --color-paper: #fafaf7;
+  --color-paper-2: #f1f0ea;
+  --color-paper-3: #e6e5df;
+  --color-ink: #1a1a1a;
+  --color-ink-2: #3a3a3a;
+  --color-ink-3: #6b6b6b;
+  --color-ink-4: #9a9a9a;
+  --color-line-soft: #c9c9c9;
+  --color-emerald-ink: #0a7d57;
+  --color-emerald-wash: #d3f3e6;
+
+  --font-hand: 'Kalam', 'Caveat', cursive;
+  --font-sketch: 'Caveat', cursive;
+  --font-code: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+body {
+  font-family: var(--font-hand);
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  background-image:
+    radial-gradient(rgba(0, 0, 0, 0.025) 1px, transparent 1px),
+    radial-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+  background-size: 3px 3px, 7px 7px;
+  background-position: 0 0, 1px 2px;
+}

@@ -6,6 +6,7 @@
     "logout": "Log out",
     "simulator": "Simulator",
     "learning": "Learning",
+    "market": "Market",
     "howItWorks": "How it works",
     "login": "Log in",
     "register": "Register"
@@ -215,6 +216,34 @@
     "deleteConfirm": "Delete this job offer?",
     "simulate": "Simulate interview",
     "changeStatus": "Change status"
+  },
+  "jobs": {
+    "colCompany": "Company / Role",
+    "colStack": "Stack",
+    "colMatch": "Match",
+    "colStage": "Stage",
+    "colAdded": "Added"
+  },
+  "market": {
+    "title": "Market",
+    "subtitle": "Live skill demand from active Polish job postings.",
+    "source": "Source: NoFluffJobs",
+    "offers": "offers",
+    "remote": "remote",
+    "seniority": "Seniority split",
+    "junior": "Junior",
+    "mid": "Mid",
+    "senior": "Senior",
+    "skillFrequency": "Skill frequency",
+    "skillHint": "% of offers in category that list this skill",
+    "categories": {
+      "backend": "Backend",
+      "frontend": "Frontend",
+      "data": "Data",
+      "devops": "DevOps",
+      "testing": "Testing",
+      "ai": "AI / ML"
+    }
   },
   "addJobModal": {
     "title": "Add job offer",

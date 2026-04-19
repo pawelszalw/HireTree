@@ -11,13 +11,13 @@ const ARCHIVED_STATUSES = ['rejected', 'closed', 'accepted']
 
 function CardPreview({ job }) {
   return (
-    <div className="bg-gray-900 border border-emerald-500/40 rounded-lg p-3 shadow-2xl cursor-grabbing select-none">
-      <p className="text-sm font-medium text-gray-100 leading-tight">{job.title}</p>
-      {job.company && <p className="text-xs text-gray-500 mt-0.5">{job.company}</p>}
+    <div className="bg-paper border-[1.5px] border-emerald-ink rounded-[6px] p-2.5 shadow-md cursor-grabbing select-none -rotate-1">
+      <p className="font-sketch font-bold text-[16px] text-ink leading-tight">{job.title}</p>
+      {job.company && <p className="font-code text-[10px] text-ink-3 mt-0.5">{job.company}</p>}
       {job.stack?.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
           {job.stack.slice(0, 3).map(tech => (
-            <span key={tech} className="text-xs bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded">
+            <span key={tech} className="font-code text-[9px] px-1.5 py-[1px] bg-paper-2 border border-line-soft rounded text-ink-3">
               {tech}
             </span>
           ))}
@@ -31,7 +31,7 @@ export default function Pipeline() {
   const { t } = useTranslation()
   const [jobs, setJobs] = useState([])
   const [activeJob, setActiveJob] = useState(null)
-  const [contextMenu, setContextMenu] = useState(null) // { x, y, job }
+  const [contextMenu, setContextMenu] = useState(null)
   const [showArchived, setShowArchived] = useState(false)
 
   const sensors = useSensors(
@@ -49,7 +49,6 @@ export default function Pipeline() {
     try {
       await updateJobStatus(jobId, newStatus)
     } catch {
-      // silently revert on error by re-fetching
       fetchJobs().then(setJobs).catch(() => {})
     }
   }, [])
@@ -74,17 +73,17 @@ export default function Pipeline() {
   const archivedJobs = jobs.filter(j => ARCHIVED_STATUSES.includes(j.status))
 
   return (
-    <div className="flex flex-col gap-6" onClick={() => setContextMenu(null)}>
+    <div className="flex flex-col gap-5" onClick={() => setContextMenu(null)}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-100">{t('pipeline.title')}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t('pipeline.subtitle')}</p>
+          <h1 className="font-sketch text-3xl font-bold text-ink">{t('pipeline.title')}</h1>
+          <p className="font-code text-[10px] text-ink-4 mt-0.5">{t('pipeline.subtitle')}</p>
         </div>
         {archivedJobs.length > 0 && (
           <button
             onClick={e => { e.stopPropagation(); setShowArchived(v => !v) }}
-            className="text-xs text-gray-500 hover:text-gray-300 border border-gray-700 hover:border-gray-500 px-3 py-1.5 rounded-lg transition-colors"
+            className="font-code text-xs text-ink-3 border border-line-soft hover:border-ink-3 px-3 py-1.5 rounded transition-colors"
           >
             {showArchived
               ? t('pipeline.hideArchived')
@@ -95,7 +94,7 @@ export default function Pipeline() {
 
       {/* Kanban board */}
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="flex gap-3 overflow-x-auto pb-4">
           {ACTIVE_COLUMNS.map(col => (
             <KanbanColumn
               key={col}
@@ -115,19 +114,17 @@ export default function Pipeline() {
       {/* Archived section */}
       {showArchived && archivedJobs.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-            {t('pipeline.archived')}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <h2 className="font-sketch text-xl font-bold text-ink-3 mb-3">{t('pipeline.archived')}</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {archivedJobs.map(job => (
               <div
                 key={job.id}
                 onContextMenu={e => handleContextMenu(e, job)}
-                className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 opacity-60 cursor-context-menu"
+                className="bg-paper-2 border-[1.5px] border-dashed border-line-soft rounded-lg p-3 opacity-60 cursor-context-menu"
               >
-                <p className="text-sm font-medium text-gray-300">{job.title}</p>
-                {job.company && <p className="text-xs text-gray-500 mt-0.5">{job.company}</p>}
-                <span className="text-xs text-gray-600 mt-2 inline-block">
+                <p className="font-sketch font-bold text-base text-ink">{job.title}</p>
+                {job.company && <p className="font-code text-[10px] text-ink-3 mt-0.5">{job.company}</p>}
+                <span className="font-code text-[10px] text-ink-4 mt-2 inline-block">
                   {t(`status.${job.status}`)}
                 </span>
               </div>

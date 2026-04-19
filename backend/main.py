@@ -1,7 +1,9 @@
 import os
 import random
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+import httpx
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Cookie, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
@@ -964,3 +966,86 @@ async def get_interview(
             for q in questions
         ],
     }
+
+
+# ---------------------------------------------------------------------------
+# Market statistics — aggregated skill demand from NoFluffJobs
+# ---------------------------------------------------------------------------
+
+_market_cache: dict[str, tuple[float, dict]] = {}
+_MARKET_TTL = 6 * 60 * 60  # 6 hours
+
+_NFJ_HEADERS = {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "Origin": "https://nofluffjobs.com",
+    "Referer": "https://nofluffjobs.com/pl/praca",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+}
+
+_VALID_CATEGORIES = {"backend", "frontend", "fullstack", "data", "devops", "testing", "ai", "mobile", "ux"}
+
+
+@app.get("/api/market")
+async def get_market_stats(category: str = "backend", _: User = Depends(get_current_user)):
+    if category not in _VALID_CATEGORIES:
+        raise HTTPException(status_code=400, detail=f"Unknown category. Valid: {sorted(_VALID_CATEGORIES)}")
+
+    cached = _market_cache.get(category)
+    if cached and (time.time() - cached[0]) < _MARKET_TTL:
+        return cached[1]
+
+    nfj_category = "artificialIntelligence" if category == "ai" else category
+
+    async with httpx.AsyncClient(timeout=20) as client:
+        resp = await client.post(
+            "https://nofluffjobs.com/api/search/posting?salaryCurrency=PLN&salaryPeriod=month&limit=200",
+            headers=_NFJ_HEADERS,
+            json={"criteriaSearch": {"category": [nfj_category]}, "lang": "pl"},
+        )
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail="NoFluffJobs API unavailable")
+
+    postings = resp.json().get("postings", [])
+    total_count = resp.json().get("totalCount", len(postings))
+
+    skill_counts: dict[str, int] = {}
+    seniority_counts: dict[str, int] = {"junior": 0, "mid": 0, "senior": 0}
+    remote_count = 0
+
+    for post in postings:
+        for tile in post.get("tiles", {}).get("values", []):
+            if tile.get("type") == "requirement":
+                for val in tile.get("values", []):
+                    name = val.strip()
+                    if name:
+                        skill_counts[name] = skill_counts.get(name, 0) + 1
+
+        for s in post.get("seniority", []):
+            key = s.lower()
+            if key in seniority_counts:
+                seniority_counts[key] += 1
+
+        if post.get("fullyRemote"):
+            remote_count += 1
+
+    n = len(postings) or 1
+    skills = sorted(
+        [{"name": k, "count": v, "pct": round(v / n * 100)} for k, v in skill_counts.items()],
+        key=lambda x: -x["count"],
+    )[:20]
+
+    seniority_total = sum(seniority_counts.values()) or 1
+    seniority_pct = {k: round(v / seniority_total * 100) for k, v in seniority_counts.items()}
+
+    result = {
+        "category": category,
+        "total": total_count,
+        "remote_pct": round(remote_count / n * 100),
+        "seniority": seniority_pct,
+        "skills": skills,
+        "source": "nofluffjobs",
+        "cached_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _market_cache[category] = (time.time(), result)
+    return result

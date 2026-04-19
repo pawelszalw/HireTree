@@ -6,6 +6,7 @@
     "logout": "Wyloguj się",
     "simulator": "Symulator",
     "learning": "Nauka",
+    "market": "Rynek",
     "howItWorks": "Jak to działa",
     "login": "Zaloguj się",
     "register": "Rejestracja"
@@ -89,7 +90,7 @@
     "button": "Wybierz ofertę",
     "loading": "Przygotowuję sesję...",
     "pickJob": "Wybierz ofertę pracy, aby zacząć",
-    "pickJobHint": "Otwórz dowolną ofertę i kliknij „Symuluj rozmowę".",
+    "pickJobHint": "Otwórz dowolną ofertę i kliknij 'Symuluj rozmowę'.",
     "browseJobs": "Przeglądaj oferty",
     "question": "Pytanie {{current}} z {{total}}",
     "revealAnswer": "Pokaż odpowiedź",
@@ -217,6 +218,34 @@
     "deleteConfirm": "Usunąć tę ofertę pracy?",
     "simulate": "Symuluj rozmowę",
     "changeStatus": "Zmień status"
+  },
+  "jobs": {
+    "colCompany": "Firma / Stanowisko",
+    "colStack": "Stack",
+    "colMatch": "Match",
+    "colStage": "Etap",
+    "colAdded": "Dodano"
+  },
+  "market": {
+    "title": "Rynek",
+    "subtitle": "Popyt na umiejętności z aktywnych polskich ogłoszeń o pracę.",
+    "source": "Źródło: NoFluffJobs",
+    "offers": "ofert",
+    "remote": "zdalne",
+    "seniority": "Podział poziomów",
+    "junior": "Junior",
+    "mid": "Mid",
+    "senior": "Senior",
+    "skillFrequency": "Częstość umiejętności",
+    "skillHint": "% ogłoszeń w kategorii wymagających tej umiejętności",
+    "categories": {
+      "backend": "Backend",
+      "frontend": "Frontend",
+      "data": "Data",
+      "devops": "DevOps",
+      "testing": "Testing",
+      "ai": "AI / ML"
+    }
   },
   "addJobModal": {
     "title": "Dodaj ofertę pracy",
