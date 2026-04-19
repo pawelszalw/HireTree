@@ -1,70 +1,50 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { fetchJob, fetchJobs, updateJobStatus, reparseJob, deleteJob, patchJob } from '../api/clip'
+import { fetchJob, updateJobStatus, reparseJob, deleteJob, patchJob } from '../api/clip'
 
-const STATUS_STYLES = {
-  saved:     'bg-gray-700 text-gray-300',
-  applied:   'bg-blue-900 text-blue-300',
-  need_prep: 'bg-purple-900 text-purple-300',
-  interview: 'bg-yellow-900 text-yellow-300',
-  offer:     'bg-emerald-900 text-emerald-300',
-  rejected:  'bg-red-900 text-red-400',
-  closed:    'bg-gray-800 text-gray-500',
-  accepted:  'bg-teal-900 text-teal-300',
-}
+const ALL_STATUSES = ['saved', 'applied', 'need_prep', 'interview', 'offer', 'rejected', 'closed', 'accepted']
 
-const ACTIVE_STATUSES = ['saved', 'applied', 'need_prep', 'interview', 'offer']
-
-function scoreColor(score) {
-  if (score >= 75) return 'bg-emerald-500'
-  if (score >= 50) return 'bg-yellow-500'
-  return 'bg-red-500'
-}
-
-function MetaChip({ label, value }) {
-  if (!value) return null
+function MatchRing({ score }) {
+  const filled = score != null ? (score / 100) * 264 : 0
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2">
-      <p className="text-[10px] text-gray-500 uppercase tracking-wider">{label}</p>
-      <p className="text-sm text-gray-200 mt-0.5 capitalize">{value}</p>
+    <div className="relative w-[130px] h-[130px] shrink-0">
+      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="#e6e5df" strokeWidth="9" />
+        {score != null && (
+          <circle
+            cx="50" cy="50" r="42"
+            fill="none"
+            stroke="#10b981"
+            strokeWidth="9"
+            strokeLinecap="round"
+            strokeDasharray={`${filled} 264`}
+            pathLength="264"
+          />
+        )}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-code text-[28px] font-bold text-emerald-ink leading-none">
+          {score != null ? `${score}%` : '—'}
+        </span>
+        <span className="font-code text-[9px] text-ink-4 mt-0.5">
+          {score != null ? 'match' : 'no cv'}
+        </span>
+      </div>
     </div>
   )
 }
 
-function SidebarItem({ job, isActive }) {
+function Tag({ children, variant = 'default' }) {
+  const styles = {
+    default: 'bg-paper-2 border-line-soft text-ink-2',
+    have: 'bg-emerald-wash border-emerald-ink text-emerald-ink',
+    miss: 'bg-paper-2 border-dashed border-line-soft text-ink-3 line-through',
+  }
   return (
-    <Link
-      to={`/jobs/${job.id}`}
-      className={`flex flex-col gap-1 px-3 py-2.5 rounded-lg transition-colors ${
-        isActive
-          ? 'bg-gray-800 border border-emerald-500/30'
-          : 'hover:bg-gray-800/60 border border-transparent'
-      }`}
-    >
-      <p className="text-sm font-medium text-gray-100 truncate leading-tight">{job.title || 'Untitled'}</p>
-      {job.company && (
-        <p className="text-xs text-gray-500 truncate">{job.company}</p>
-      )}
-      <div className="flex items-center gap-2 mt-0.5">
-        {job.match_score != null ? (
-          <div className="flex items-center gap-1.5 flex-1">
-            <div className="flex-1 bg-gray-700 rounded-full h-1 overflow-hidden">
-              <div
-                className={`h-1 rounded-full ${scoreColor(job.match_score)}`}
-                style={{ width: `${job.match_score}%` }}
-              />
-            </div>
-            <span className="text-[10px] text-gray-500 shrink-0">{job.match_score}%</span>
-          </div>
-        ) : (
-          <div className="flex-1" />
-        )}
-        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_STYLES[job.status] ?? 'bg-gray-700 text-gray-300'}`}>
-          {job.status}
-        </span>
-      </div>
-    </Link>
+    <span className={`font-code text-[11px] px-2 py-[3px] rounded border-[1.5px] ${styles[variant]}`}>
+      {children}
+    </span>
   )
 }
 
@@ -74,30 +54,35 @@ export default function JobDetail() {
   const { t } = useTranslation()
 
   const [job, setJob] = useState(null)
-  const [allJobs, setAllJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [statusChanging, setStatusChanging] = useState(false)
+  const [showStatusMenu, setShowStatusMenu] = useState(false)
   const [reparsing, setReparsing] = useState(false)
   const [reparseError, setReparseError] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [editingApplyUrl, setEditingApplyUrl] = useState(false)
   const [applyUrlDraft, setApplyUrlDraft] = useState('')
+  const statusMenuRef = useRef(null)
 
   useEffect(() => {
     setLoading(true)
     setError(false)
-    Promise.all([
-      fetchJob(Number(id)),
-      fetchJobs(),
-    ])
-      .then(([job, jobs]) => {
-        setJob(job)
-        setAllJobs(jobs)
-      })
+    fetchJob(Number(id))
+      .then(setJob)
       .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    const handle = (e) => {
+      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target)) {
+        setShowStatusMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [])
 
   const handleSaveApplyUrl = async () => {
     const updated = await patchJob(job.id, { apply_url: applyUrlDraft.trim() })
@@ -132,10 +117,10 @@ export default function JobDetail() {
   const handleStatusChange = async (newStatus) => {
     if (!job || newStatus === job.status) return
     setStatusChanging(true)
+    setShowStatusMenu(false)
     try {
       const updated = await updateJobStatus(job.id, newStatus)
       setJob(j => ({ ...j, status: updated.status }))
-      setAllJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: updated.status } : j))
     } finally {
       setStatusChanging(false)
     }
@@ -143,8 +128,8 @@ export default function JobDetail() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24 text-gray-500 text-sm">
-        Loading...
+      <div className="flex items-center justify-center py-24">
+        <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -152,8 +137,8 @@ export default function JobDetail() {
   if (error || !job) {
     return (
       <div className="flex flex-col items-center gap-4 py-24 text-center">
-        <p className="text-gray-400">{t('jobDetail.notFound')}</p>
-        <button onClick={() => navigate(-1)} className="text-sm text-emerald-400 hover:text-emerald-300">
+        <p className="font-hand text-base text-ink-3">{t('jobDetail.notFound')}</p>
+        <button onClick={() => navigate(-1)} className="font-code text-xs text-emerald-ink hover:underline">
           {t('jobDetail.back')}
         </button>
       </div>
@@ -166,241 +151,200 @@ export default function JobDetail() {
     match_score, matched = [], missing = [],
   } = job
 
+  const matchedSet = new Set(matched.map(s => s.toLowerCase()))
+  const missingSet = new Set(missing.map(s => s.toLowerCase()))
+
   return (
-    <div className="flex gap-5 items-start">
+    <div className="flex flex-col gap-0 max-w-5xl">
+      {/* Back */}
+      <button
+        onClick={() => navigate('/jobs')}
+        className="self-start font-code text-[11px] text-ink-3 hover:text-ink transition-colors mb-4"
+      >
+        {t('jobDetail.back')}
+      </button>
 
-      {/* Left sidebar — job list */}
-      <aside className="hidden lg:flex flex-col w-64 shrink-0 sticky top-20 max-h-[calc(100vh-5.5rem)] overflow-y-auto">
-        <div className="flex items-center justify-between px-2 mb-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            {t('dashboard.savedJobs')}
-          </p>
-          <span className="text-xs text-gray-600">{allJobs.length}</span>
+      {/* Header */}
+      <div className="flex gap-5 items-start pb-5 border-b-[1.5px] border-dashed border-line-soft mb-6">
+        <div className="w-16 h-16 rounded-lg bg-paper-3 border-[1.5px] border-line-soft flex items-center justify-center font-code text-sm text-ink-4 shrink-0">
+          {(company?.[0] ?? '?').toUpperCase()}
         </div>
-        <div className="flex flex-col gap-0.5">
-          {allJobs.map(j => (
-            <SidebarItem key={j.id} job={j} isActive={j.id === Number(id)} />
-          ))}
-          {allJobs.length === 0 && (
-            <p className="text-xs text-gray-600 px-3 py-2">{t('dashboard.empty')}</p>
-          )}
-        </div>
-      </aside>
-
-      {/* Main detail */}
-      <div className="flex-1 min-w-0 flex flex-col gap-6">
-
-        {/* Back */}
-        <button
-          onClick={() => navigate(-1)}
-          className="self-start text-sm text-gray-500 hover:text-gray-300 transition-colors"
-        >
-          {t('jobDetail.back')}
-        </button>
-
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-100 leading-tight">{title}</h1>
-            {company && (
-              <p className="text-gray-400 mt-1">{company}{location ? ` · ${location}` : ''}</p>
-            )}
-          </div>
-          <span className={`text-sm px-3 py-1 rounded-full font-medium whitespace-nowrap ${STATUS_STYLES[status] ?? 'bg-gray-700 text-gray-300'}`}>
-            {t(`status.${status}`)}
-          </span>
-        </div>
-
-        {/* Meta chips */}
-        <div className="flex flex-wrap gap-2">
-          <MetaChip label={t('jobDetail.seniority')} value={seniority} />
-          <MetaChip label={t('jobDetail.mode')} value={mode} />
-          <MetaChip label={t('jobDetail.contract')} value={contract} />
-          <MetaChip label={t('jobDetail.salary')} value={salary} />
-          {clippedAt && (
-            <MetaChip
-              label={t('jobDetail.savedOn')}
-              value={new Date(clippedAt).toLocaleDateString()}
-            />
-          )}
-        </div>
-
-        {/* Stack + Match */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-              {t('jobDetail.stack')}
-            </h2>
-            {stack.length === 0 ? (
-              <p className="text-sm text-gray-600">{t('jobDetail.noStack')}</p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {stack.map(tech => (
-                  <span key={tech} className="text-sm bg-gray-800 text-gray-300 px-2.5 py-1 rounded-lg">
-                    {tech}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-              {t('jobDetail.matchScore')}
-            </h2>
-            {stack.length === 0 ? (
-              <p className="text-sm text-gray-600">{t('jobDetail.noStack')}</p>
-            ) : match_score == null ? (
-              <p className="text-sm text-gray-600">{t('jobDetail.noResume')}</p>
-            ) : (
-              <>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 bg-gray-800 rounded-full h-2.5 overflow-hidden">
-                    <div
-                      className={`h-2.5 rounded-full ${scoreColor(match_score)} transition-all`}
-                      style={{ width: `${match_score}%` }}
-                    />
-                  </div>
-                  <span className="text-xl font-bold text-gray-100 w-14 text-right">{match_score}%</span>
-                </div>
-                {missing.length > 0 && (
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1.5">{t('jobDetail.missing')}</p>
-                    <div className="flex flex-wrap gap-1">
-                      {missing.map(s => (
-                        <span key={s} className="text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full">
-                          − {s}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {matched.length > 0 && (
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1.5">{t('jobDetail.matched')}</p>
-                    <div className="flex flex-wrap gap-1">
-                      {matched.map(s => (
-                        <span key={s} className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                          ✓ {s}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Description */}
-        {description && (
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 flex flex-col gap-2">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-              {t('jobDetail.description')}
-            </h2>
-            <p className="text-gray-300 leading-relaxed">{description}</p>
-          </div>
-        )}
-
-        {/* Change status */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-            {t('jobDetail.changeStatus')}
-          </h2>
+        <div className="flex-1 min-w-0">
+          {company && <p className="font-code text-[11px] text-ink-3 mb-1">{company}</p>}
+          <h1 className="font-sketch text-4xl font-bold text-ink leading-tight mb-2">{title}</h1>
           <div className="flex flex-wrap gap-2">
-            {ACTIVE_STATUSES.map(s => (
-              <button
-                key={s}
-                disabled={statusChanging || s === status}
-                onClick={() => handleStatusChange(s)}
-                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-                  s === status
-                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 cursor-default'
-                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200'
-                }`}
-              >
-                {t(`status.${s}`)}
-              </button>
-            ))}
+            <span className="inline-flex items-center gap-1.5 font-code text-[11px] px-2.5 py-1 border-[1.5px] border-line-soft rounded-full bg-paper">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 border border-emerald-ink shrink-0" />
+              {t(`status.${status}`)}
+            </span>
+            {location && <Tag>{location}</Tag>}
+            {seniority && <Tag>{seniority}</Tag>}
+            {contract && <Tag>{contract}</Tag>}
+            {salary && <Tag>{salary}</Tag>}
           </div>
         </div>
+        <MatchRing score={match_score} />
+      </div>
 
-        {/* Actions */}
-        <div className="flex flex-col gap-2 pb-4">
-          <div className="flex gap-3 flex-wrap">
-            {url && (
-              <a
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-gray-200 px-4 py-2 rounded-lg transition-colors"
-              >
-                {t('jobDetail.viewOriginal')} ↗
-              </a>
-            )}
-            {apply_url && !editingApplyUrl && (
-              <a
-                href={apply_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                {t('jobDetail.apply')} ↗
-              </a>
-            )}
-            {editingApplyUrl ? (
-              <div className="flex gap-2 flex-1">
-                <input
-                  autoFocus
-                  type="url"
-                  value={applyUrlDraft}
-                  onChange={e => setApplyUrlDraft(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') handleSaveApplyUrl(); if (e.key === 'Escape') setEditingApplyUrl(false) }}
-                  placeholder="https://..."
-                  className="flex-1 text-sm bg-gray-800 border border-gray-600 text-gray-100 px-3 py-1.5 rounded-lg outline-none focus:border-blue-500"
-                />
-                <button onClick={handleSaveApplyUrl} className="text-sm bg-blue-700 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg transition-colors">
-                  {t('jobDetail.save')}
-                </button>
-                <button onClick={() => setEditingApplyUrl(false)} className="text-sm text-gray-500 hover:text-gray-300 px-2">✕</button>
+      {/* Two-col */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
+
+        {/* Left: stack + description */}
+        <div>
+          {stack.length > 0 && (
+            <div className="mb-6">
+              <h2 className="font-sketch text-2xl font-bold text-ink mb-2">{t('jobDetail.stack')}</h2>
+              <div className="flex flex-wrap gap-1.5">
+                {stack.map(tech => {
+                  const tl = tech.toLowerCase()
+                  const variant = matchedSet.has(tl) ? 'have' : missingSet.has(tl) ? 'miss' : 'default'
+                  return <Tag key={tech} variant={variant}>{tech}</Tag>
+                })}
               </div>
-            ) : (
-              <button
-                onClick={() => { setApplyUrlDraft(apply_url || ''); setEditingApplyUrl(true) }}
-                className="text-sm border border-dashed border-gray-700 hover:border-gray-500 text-gray-500 hover:text-gray-300 px-4 py-2 rounded-lg transition-colors"
-              >
-                {apply_url ? t('jobDetail.editApplyUrl') : t('jobDetail.setApplyUrl')}
-              </button>
-            )}
-            <button
-              onClick={handleReparse}
-              disabled={reparsing}
-              className="text-sm border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-gray-200 px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {reparsing ? t('jobDetail.reparsing') : t('jobDetail.reparse')}
-            </button>
-            <button
-              onClick={() => navigate('/simulator')}
-              className="text-sm bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              {t('jobDetail.simulate')}
-            </button>
-          </div>
-          {reparseError && (
-            <p className="text-xs text-red-400">{reparseError}</p>
+            </div>
           )}
-          <div className="pt-2 border-t border-gray-800">
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="text-xs text-red-500 hover:text-red-400 transition-colors disabled:opacity-50"
-            >
-              {deleting ? t('jobDetail.deleting') : t('jobDetail.delete')}
-            </button>
-          </div>
+
+          {description && (
+            <div>
+              <h2 className="font-sketch text-2xl font-bold text-ink mb-2">{t('jobDetail.description')}</h2>
+              <p className="font-hand text-base text-ink-2 leading-relaxed whitespace-pre-wrap">{description}</p>
+            </div>
+          )}
         </div>
 
+        {/* Right: sticky action rail */}
+        <aside>
+          <div
+            className="bg-paper-2 border-[1.5px] border-ink rounded-lg p-4 flex flex-col gap-3 sticky top-6"
+          >
+            <p className="font-code text-[10px] tracking-[1.5px] uppercase text-ink-4">Actions</p>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => navigate(`/simulator?job=${job.id}`)}
+                className="w-full font-code text-xs bg-ink text-paper py-2 px-3 rounded border-2 border-ink hover:bg-ink-2 transition-colors text-left"
+              >
+                ▶ {t('jobDetail.simulate')}
+              </button>
+
+              {apply_url && !editingApplyUrl && (
+                <a
+                  href={apply_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full font-code text-xs bg-paper border-[1.5px] border-ink text-ink-2 py-2 px-3 rounded hover:bg-paper-3 transition-colors"
+                >
+                  ↗ {t('jobDetail.apply')}
+                </a>
+              )}
+
+              {url && (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full font-code text-xs bg-paper border-[1.5px] border-ink text-ink-2 py-2 px-3 rounded hover:bg-paper-3 transition-colors"
+                >
+                  ↗ {t('jobDetail.viewOriginal')}
+                </a>
+              )}
+
+              <button
+                onClick={handleReparse}
+                disabled={reparsing}
+                className="w-full font-code text-xs bg-paper border-[1.5px] border-ink text-ink-2 py-2 px-3 rounded hover:bg-paper-3 transition-colors disabled:opacity-50 text-left"
+              >
+                ↻ {reparsing ? t('jobDetail.reparsing') : t('jobDetail.reparse')}
+              </button>
+
+              {/* Status dropdown */}
+              <div className="relative" ref={statusMenuRef}>
+                <button
+                  onClick={() => setShowStatusMenu(v => !v)}
+                  disabled={statusChanging}
+                  className="w-full font-code text-xs bg-paper border-[1.5px] border-line-soft text-ink-3 py-2 px-3 rounded hover:border-ink-3 transition-colors disabled:opacity-50 text-left"
+                >
+                  {t('jobDetail.changeStatus')} ▾
+                </button>
+                {showStatusMenu && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-paper border-[1.5px] border-ink rounded shadow-[2px_2px_0_rgba(0,0,0,0.1)] z-20 py-1">
+                    {ALL_STATUSES.map(s => (
+                      <button
+                        key={s}
+                        onClick={() => handleStatusChange(s)}
+                        className={`w-full text-left font-code text-xs px-3 py-1.5 transition-colors ${
+                          s === status ? 'bg-emerald-wash text-emerald-ink' : 'text-ink-2 hover:bg-paper-2'
+                        }`}
+                      >
+                        {t(`status.${s}`)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Apply URL */}
+              {editingApplyUrl ? (
+                <div className="flex flex-col gap-1.5">
+                  <input
+                    autoFocus
+                    type="url"
+                    value={applyUrlDraft}
+                    onChange={e => setApplyUrlDraft(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSaveApplyUrl(); if (e.key === 'Escape') setEditingApplyUrl(false) }}
+                    placeholder="https://..."
+                    className="bg-paper border-[1.5px] border-ink rounded px-2 py-1.5 font-hand text-sm text-ink placeholder:text-ink-4 focus:outline-none w-full"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveApplyUrl}
+                      className="flex-1 font-code text-[10px] bg-ink text-paper py-1.5 rounded border-2 border-ink"
+                    >
+                      {t('jobDetail.save')}
+                    </button>
+                    <button
+                      onClick={() => setEditingApplyUrl(false)}
+                      className="font-code text-[10px] text-ink-4 px-2"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setApplyUrlDraft(apply_url || ''); setEditingApplyUrl(true) }}
+                  className="w-full font-code text-xs border border-dashed border-line-soft text-ink-4 py-2 px-3 rounded hover:border-ink-3 hover:text-ink-3 transition-colors text-left"
+                >
+                  {apply_url ? t('jobDetail.editApplyUrl') : t('jobDetail.setApplyUrl')}
+                </button>
+              )}
+
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="w-full font-code text-[10px] text-[#c84040] border border-dashed border-[#e0b5b5] py-2 px-3 rounded hover:border-[#c84040] transition-colors disabled:opacity-50 text-left"
+              >
+                {deleting ? t('jobDetail.deleting') : t('jobDetail.delete')}
+              </button>
+            </div>
+
+            {reparseError && (
+              <p className="font-code text-[10px] text-red-600">{reparseError}</p>
+            )}
+
+            {/* Missing skills */}
+            {missing.length > 0 && (
+              <div className="pt-3 border-t border-dashed border-line-soft">
+                <p className="font-code text-[10px] tracking-[1.5px] uppercase text-ink-4 mb-2">
+                  Missing ({missing.length})
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {missing.map(s => <Tag key={s} variant="miss">{s}</Tag>)}
+                </div>
+              </div>
+            )}
+          </div>
+        </aside>
       </div>
     </div>
   )

@@ -119,6 +119,22 @@ export async function patchResumeSkill(resumeId, skillName, patch) {
 }
 
 // ---------------------------------------------------------------------------
+// Interview Simulator
+// ---------------------------------------------------------------------------
+
+export async function fetchInterview(jobId) {
+  return handleResponse(await fetch(`${API_URL}/api/jobs/${jobId}/interview`, CREDS))
+}
+
+// ---------------------------------------------------------------------------
+// Market statistics
+// ---------------------------------------------------------------------------
+
+export async function fetchMarket(category = 'backend') {
+  return handleResponse(await fetch(`${API_URL}/api/market?category=${encodeURIComponent(category)}`, CREDS))
+}
+
+// ---------------------------------------------------------------------------
 // Skill endpoint (legacy — operates on active resume)
 // ---------------------------------------------------------------------------
 

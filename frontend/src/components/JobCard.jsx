@@ -159,7 +159,7 @@ export default function JobCard({ job }) {
           </a>
         )}
         <button
-          onClick={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); navigate(`/simulator?job=${job.id}`) }}
           className="flex-1 text-xs bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-lg transition-colors"
         >
           {t('jobCard.simulateInterview')}

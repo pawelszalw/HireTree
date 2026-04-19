@@ -1,129 +1,41 @@
-import { useState, useRef, useEffect } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useAuth } from '../context/useAuth'
-
-const linkClass = ({ isActive }) =>
-  `hover:text-gray-100 transition-colors ${isActive ? 'text-gray-100' : 'text-gray-400'}`
-
-const plainLink = 'text-gray-400 hover:text-gray-100 transition-colors'
 
 export default function Navbar() {
   const { t, i18n } = useTranslation()
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const dropdownRef = useRef(null)
-
-  const toggleLang = () =>
-    i18n.changeLanguage(i18n.language === 'en' ? 'pl' : 'en')
-
-  useEffect(() => {
-    const handle = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setDropdownOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handle)
-    return () => document.removeEventListener('mousedown', handle)
-  }, [])
-
-  const handleLogout = async () => {
-    setDropdownOpen(false)
-    await logout()
-    navigate('/login')
-  }
+  const toggleLang = () => i18n.changeLanguage(i18n.language === 'en' ? 'pl' : 'en')
 
   return (
-    <header className="border-b border-gray-800 bg-gray-950/80 backdrop-blur sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center gap-6">
-
-        {/* Logo */}
-        <NavLink to="/" className="text-emerald-400 font-bold text-xl tracking-tight shrink-0">
-          HireTree
-        </NavLink>
-
-        {/* Left nav — authenticated links */}
-        {user && (
-          <nav className="flex items-center gap-5 text-sm">
-            <NavLink to="/jobs" className={linkClass}>{t('nav.jobs')}</NavLink>
-            <NavLink to="/pipeline" className={linkClass}>{t('nav.pipeline')}</NavLink>
-            <NavLink to="/simulator" className={linkClass}>{t('nav.simulator')}</NavLink>
-            <NavLink to="/learning" className={linkClass}>{t('nav.learning')}</NavLink>
-          </nav>
-        )}
-
-        {/* Spacer — pushes right section to the edge */}
-        <div className="flex-1" />
-
-        {/* How it works — far right before auth */}
-        <NavLink to="/how-it-works" className={`text-sm ${plainLink}`}>
-          {t('nav.howItWorks')}
-        </NavLink>
-
-        {/* Lang toggle */}
-        <button
-          onClick={toggleLang}
-          className="text-xs font-mono text-gray-500 hover:text-gray-300 border border-gray-700 hover:border-gray-500 px-2 py-1 rounded transition-colors"
-        >
-          {i18n.language === 'en' ? 'EN' : 'PL'}
-        </button>
-
-        {/* Auth */}
-        {user ? (
-          <div ref={dropdownRef} className="relative">
-            <button
-              onClick={() => setDropdownOpen(o => !o)}
-              className="flex items-center gap-2 h-8 pl-1 pr-2 rounded-full bg-gray-800 border border-gray-700 hover:border-gray-500 transition-colors"
-            >
-              <div className="w-6 h-6 rounded-full bg-emerald-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                {user.email[0].toUpperCase()}
-              </div>
-              <span className="text-xs text-gray-400 max-w-[120px] truncate hidden sm:block">
-                {user.email}
-              </span>
-            </button>
-
-            {dropdownOpen && (
-              <div className="absolute right-0 top-10 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl py-1 min-w-[180px]">
-                <div className="px-4 py-2 border-b border-gray-800">
-                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                </div>
-                <NavLink
-                  to="/profile"
-                  onClick={() => setDropdownOpen(false)}
-                  className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-gray-100 transition-colors"
-                >
-                  {t('nav.profile')}
-                </NavLink>
-                <div className="border-t border-gray-800 my-1" />
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-400 hover:bg-gray-800 hover:text-red-400 transition-colors"
-                >
-                  {t('nav.logout')}
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <NavLink
-              to="/login"
-              className="text-sm text-gray-400 hover:text-gray-100 transition-colors"
-            >
-              {t('nav.login')}
-            </NavLink>
-            <NavLink
-              to="/register"
-              className="text-sm bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-1.5 rounded-lg transition-colors"
-            >
-              {t('nav.register')}
-            </NavLink>
-          </div>
-        )}
-
-      </div>
+    <header className="border-b-[1.5px] border-ink bg-paper-2 px-6 h-12 flex items-center gap-4 shrink-0">
+      <NavLink to="/" className="flex items-center gap-2">
+        <div
+          className="w-[16px] h-[16px] bg-emerald-500 border-2 border-ink shrink-0"
+          style={{ borderRadius: '60% 10% 60% 10%', transform: 'rotate(-18deg)' }}
+        />
+        <span className="font-sketch font-bold text-xl text-ink leading-none">HireTree</span>
+      </NavLink>
+      <div className="flex-1" />
+      <NavLink
+        to="/how-it-works"
+        className="font-code text-xs text-ink-3 hover:text-ink transition-colors"
+      >
+        {t('nav.howItWorks')}
+      </NavLink>
+      <button
+        onClick={toggleLang}
+        className="font-code text-[10px] text-ink-4 border border-line-soft px-2 py-0.5 rounded hover:border-ink-3 transition-colors"
+      >
+        {i18n.language === 'en' ? 'EN' : 'PL'}
+      </button>
+      <NavLink to="/login" className="font-code text-xs text-ink-3 hover:text-ink transition-colors">
+        {t('nav.login')}
+      </NavLink>
+      <NavLink
+        to="/register"
+        className="font-code text-xs bg-emerald-500 text-white border-2 border-ink px-3 py-1 rounded hover:bg-emerald-400 transition-colors"
+      >
+        {t('nav.register')}
+      </NavLink>
     </header>
   )
 }

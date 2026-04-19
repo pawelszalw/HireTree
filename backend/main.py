@@ -1,11 +1,15 @@
 import os
+import random
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+import httpx
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Cookie, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy import func
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,7 +23,7 @@ from cv_parser import extract_text, anonymize, fingerprint
 from profile_utils import skills_to_compact
 from auth import hash_password, verify_password, create_access_token, decode_access_token
 from database import get_session, create_tables
-from models import User, Job, Resume
+from models import User, Job, Resume, Question, InterviewSession
 
 
 @asynccontextmanager
@@ -853,3 +857,195 @@ async def patch_skill(
     active.skills = new_skills  # full reassignment for JSONB change tracking
     await session.commit()
     return updated_skill
+
+
+# ---------------------------------------------------------------------------
+# Interview Simulator endpoint
+# ---------------------------------------------------------------------------
+
+MAX_INTERVIEW_QUESTIONS = 10
+
+_SENIORITY_DIFFICULTIES: dict[str, set[str]] = {
+    "junior": {"easy", "medium"},
+    "jr":     {"easy", "medium"},
+    "entry":  {"easy", "medium"},
+    "intern": {"easy", "medium"},
+    "senior": {"medium", "hard"},
+    "sr":     {"medium", "hard"},
+    "lead":   {"medium", "hard"},
+    "staff":  {"medium", "hard"},
+    "principal": {"medium", "hard"},
+    "expert": {"medium", "hard"},
+}
+
+
+def _difficulty_filter(seniority: str) -> set[str] | None:
+    """Return allowed difficulties for a seniority label, or None = all."""
+    s = seniority.lower()
+    for keyword, levels in _SENIORITY_DIFFICULTIES.items():
+        if keyword in s:
+            return levels
+    return None  # mid / unrecognised → all difficulties
+
+
+@app.get("/api/jobs/{job_id}/interview")
+async def get_interview(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    job_result = await session.exec(
+        select(Job).where(Job.id == job_id, Job.user_id == current_user.id)
+    )
+    job = job_result.first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    stack_lower = [s.lower() for s in (job.stack or [])]
+    allowed_difficulties = _difficulty_filter(job.seniority or "")
+
+    # --- Questions matching the job's stack ---
+    questions: list[Question] = []
+    if stack_lower:
+        q_result = await session.exec(
+            select(Question).where(func.lower(Question.skill).in_(stack_lower))
+        )
+        candidates = list(q_result.all())
+        if allowed_difficulties:
+            filtered = [q for q in candidates if q.difficulty in allowed_difficulties]
+            questions = filtered if filtered else candidates  # relax if nothing matches
+        else:
+            questions = candidates
+
+    # --- Supplement with unrelated questions if we need more ---
+    if len(questions) < MAX_INTERVIEW_QUESTIONS:
+        existing_ids = [q.id for q in questions]
+        if existing_ids:
+            fill_result = await session.exec(
+                select(Question).where(Question.id.notin_(existing_ids))
+            )
+        else:
+            fill_result = await session.exec(select(Question))
+        fill = list(fill_result.all())
+        random.shuffle(fill)
+        questions += fill[: MAX_INTERVIEW_QUESTIONS - len(questions)]
+
+    if not questions:
+        raise HTTPException(
+            status_code=404,
+            detail="No questions available. Run the seed script to populate the question bank.",
+        )
+
+    random.shuffle(questions)
+    questions = questions[:MAX_INTERVIEW_QUESTIONS]
+
+    interview = InterviewSession(
+        user_id=current_user.id,
+        job_id=job_id,
+        question_ids=[q.id for q in questions],
+    )
+    session.add(interview)
+    await session.commit()
+    await session.refresh(interview)
+
+    return {
+        "session_id": interview.id,
+        "job_title": job.title,
+        "company": job.company,
+        "seniority": job.seniority,
+        "total": len(questions),
+        "questions": [
+            {
+                "id": q.id,
+                "skill": q.skill,
+                "question": q.question,
+                "answer": q.answer,
+                "category": q.category,
+                "difficulty": q.difficulty,
+            }
+            for q in questions
+        ],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Market statistics — aggregated skill demand from NoFluffJobs
+# ---------------------------------------------------------------------------
+
+_market_cache: dict[str, tuple[float, dict]] = {}
+_MARKET_TTL = 6 * 60 * 60  # 6 hours
+
+_NFJ_HEADERS = {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "Origin": "https://nofluffjobs.com",
+    "Referer": "https://nofluffjobs.com/pl/praca",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+}
+
+_VALID_CATEGORIES = {"backend", "frontend", "fullstack", "data", "devops", "testing", "ai", "mobile", "ux"}
+
+
+@app.get("/api/market")
+async def get_market_stats(category: str = "backend", _: User = Depends(get_current_user)):
+    if category not in _VALID_CATEGORIES:
+        raise HTTPException(status_code=400, detail=f"Unknown category. Valid: {sorted(_VALID_CATEGORIES)}")
+
+    cached = _market_cache.get(category)
+    if cached and (time.time() - cached[0]) < _MARKET_TTL:
+        return cached[1]
+
+    nfj_category = "artificialIntelligence" if category == "ai" else category
+
+    async with httpx.AsyncClient(timeout=20) as client:
+        resp = await client.post(
+            "https://nofluffjobs.com/api/search/posting?salaryCurrency=PLN&salaryPeriod=month&limit=200",
+            headers=_NFJ_HEADERS,
+            json={"criteriaSearch": {"category": [nfj_category]}, "lang": "pl"},
+        )
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail="NoFluffJobs API unavailable")
+
+    postings = resp.json().get("postings", [])
+    total_count = resp.json().get("totalCount", len(postings))
+
+    skill_counts: dict[str, int] = {}
+    seniority_counts: dict[str, int] = {"junior": 0, "mid": 0, "senior": 0}
+    remote_count = 0
+
+    for post in postings:
+        for tile in post.get("tiles", {}).get("values", []):
+            if tile.get("type") == "requirement":
+                for val in tile.get("values", []):
+                    name = val.strip()
+                    if name:
+                        skill_counts[name] = skill_counts.get(name, 0) + 1
+
+        for s in post.get("seniority", []):
+            key = s.lower()
+            if key in seniority_counts:
+                seniority_counts[key] += 1
+
+        if post.get("fullyRemote"):
+            remote_count += 1
+
+    n = len(postings) or 1
+    skills = sorted(
+        [{"name": k, "count": v, "pct": round(v / n * 100)} for k, v in skill_counts.items()],
+        key=lambda x: -x["count"],
+    )[:20]
+
+    seniority_total = sum(seniority_counts.values()) or 1
+    seniority_pct = {k: round(v / seniority_total * 100) for k, v in seniority_counts.items()}
+
+    result = {
+        "category": category,
+        "total": total_count,
+        "remote_pct": round(remote_count / n * 100),
+        "seniority": seniority_pct,
+        "skills": skills,
+        "source": "nofluffjobs",
+        "cached_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _market_cache[category] = (time.time(), result)
+    return result

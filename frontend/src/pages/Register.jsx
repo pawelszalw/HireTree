@@ -37,69 +37,82 @@ export default function Register() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[70vh]">
-      <div className="w-full max-w-sm flex flex-col gap-6">
-        <div className="text-center">
-          <span className="text-emerald-400 font-bold text-2xl tracking-tight">HireTree</span>
-          <p className="text-gray-500 text-sm mt-2">{t('auth.registerSubtitle')}</p>
+    <div className="w-full max-w-sm flex flex-col gap-6">
+      <div className="text-center">
+        <div className="inline-flex items-center gap-2 mb-2">
+          <div
+            className="w-5 h-5 bg-emerald-500 border-2 border-ink shrink-0"
+            style={{ borderRadius: '60% 10% 60% 10%', transform: 'rotate(-18deg)' }}
+          />
+          <span className="font-sketch font-bold text-3xl text-ink leading-none">HireTree</span>
+        </div>
+        <p className="font-code text-xs text-ink-4">{t('auth.registerSubtitle')}</p>
+      </div>
+
+      <form
+        onSubmit={handleSubmit}
+        className="bg-paper-2 border-[1.5px] border-ink rounded-lg p-6 flex flex-col gap-4"
+      >
+        <div className="flex flex-col gap-1.5">
+          <label className="font-code text-[10px] tracking-[1px] uppercase text-ink-4">
+            {t('auth.email')}
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+            autoFocus
+            placeholder="you@example.com"
+            className="bg-paper border-[1.5px] border-line-soft rounded px-3 py-2 font-hand text-base text-ink placeholder:text-ink-4 focus:outline-none focus:border-ink transition-colors"
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-gray-500">{t('auth.email')}</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              autoFocus
-              placeholder="you@example.com"
-              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-emerald-500"
-            />
-          </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="font-code text-[10px] tracking-[1px] uppercase text-ink-4">
+            {t('auth.password')}
+          </label>
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            placeholder="••••••••"
+            className="bg-paper border-[1.5px] border-line-soft rounded px-3 py-2 font-hand text-base text-ink placeholder:text-ink-4 focus:outline-none focus:border-ink transition-colors"
+          />
+        </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-gray-500">{t('auth.password')}</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              placeholder="••••••••"
-              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-emerald-500"
-            />
-          </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="font-code text-[10px] tracking-[1px] uppercase text-ink-4">
+            {t('auth.confirmPassword')}
+          </label>
+          <input
+            type="password"
+            value={confirm}
+            onChange={e => setConfirm(e.target.value)}
+            required
+            placeholder="••••••••"
+            className="bg-paper border-[1.5px] border-line-soft rounded px-3 py-2 font-hand text-base text-ink placeholder:text-ink-4 focus:outline-none focus:border-ink transition-colors"
+          />
+        </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-gray-500">{t('auth.confirmPassword')}</label>
-            <input
-              type="password"
-              value={confirm}
-              onChange={e => setConfirm(e.target.value)}
-              required
-              placeholder="••••••••"
-              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-emerald-500"
-            />
-          </div>
+        {error && <p className="font-code text-[10px] text-[#c84040]">{error}</p>}
 
-          {error && <p className="text-xs text-red-400">{error}</p>}
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-ink text-paper font-code text-sm py-2.5 rounded border-2 border-ink hover:bg-ink-2 disabled:opacity-50 transition-colors mt-1"
+        >
+          {loading ? t('auth.registering') : t('auth.createAccount')}
+        </button>
+      </form>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-800 disabled:text-gray-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors mt-1"
-          >
-            {loading ? t('auth.registering') : t('auth.createAccount')}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-gray-600">
-          {t('auth.hasAccount')}{' '}
-          <Link to="/login" className="text-emerald-400 hover:text-emerald-300 transition-colors">
-            {t('auth.login')}
-          </Link>
-        </p>
-      </div>
+      <p className="font-code text-center text-xs text-ink-4">
+        {t('auth.hasAccount')}{' '}
+        <Link to="/login" className="text-emerald-ink hover:underline transition-colors">
+          {t('auth.login')}
+        </Link>
+      </p>
     </div>
   )
 }

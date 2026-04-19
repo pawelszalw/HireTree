@@ -98,13 +98,172 @@ export function mockApiPlugin() {
         }
       })
 
-      // /api/jobs — list, get, patch, delete, reparse
+      // GET /api/market?category=backend — aggregated skill stats (mock data)
+      server.middlewares.use('/api/market', (req, res) => {
+        if (req.method !== 'GET') return json(res, { error: 'Method not allowed' }, 405)
+        const url = new URL(req.url, 'http://localhost')
+        const category = url.searchParams.get('category') || 'backend'
+
+        const DATA = {
+          backend: {
+            total: 1840,
+            remote_pct: 62,
+            seniority: { junior: 18, mid: 52, senior: 30 },
+            skills: [
+              { name: 'REST API', count: 1288, pct: 70 },
+              { name: 'Python', count: 1197, pct: 65 },
+              { name: 'SQL', count: 1012, pct: 55 },
+              { name: 'Docker', count: 1104, pct: 60 },
+              { name: 'AWS', count: 736, pct: 40 },
+              { name: 'Java', count: 828, pct: 45 },
+              { name: 'PostgreSQL', count: 920, pct: 50 },
+              { name: 'Node.js', count: 736, pct: 40 },
+              { name: 'Kubernetes', count: 552, pct: 30 },
+              { name: 'Redis', count: 552, pct: 30 },
+              { name: 'TypeScript', count: 460, pct: 25 },
+              { name: 'Spring', count: 644, pct: 35 },
+              { name: 'FastAPI', count: 460, pct: 25 },
+              { name: 'C#', count: 368, pct: 20 },
+              { name: 'Go', count: 276, pct: 15 },
+            ],
+          },
+          frontend: {
+            total: 720,
+            remote_pct: 71,
+            seniority: { junior: 22, mid: 55, senior: 23 },
+            skills: [
+              { name: 'JavaScript', count: 648, pct: 90 },
+              { name: 'HTML/CSS', count: 576, pct: 80 },
+              { name: 'React', count: 540, pct: 75 },
+              { name: 'TypeScript', count: 504, pct: 70 },
+              { name: 'Next.js', count: 324, pct: 45 },
+              { name: 'CSS', count: 468, pct: 65 },
+              { name: 'Vue', count: 252, pct: 35 },
+              { name: 'TailwindCSS', count: 252, pct: 35 },
+              { name: 'Redux', count: 216, pct: 30 },
+              { name: 'Angular', count: 216, pct: 30 },
+              { name: 'Webpack', count: 180, pct: 25 },
+              { name: 'REST API', count: 396, pct: 55 },
+              { name: 'Git', count: 432, pct: 60 },
+              { name: 'Figma', count: 180, pct: 25 },
+            ],
+          },
+          data: {
+            total: 530,
+            remote_pct: 58,
+            seniority: { junior: 12, mid: 48, senior: 40 },
+            skills: [
+              { name: 'Python', count: 424, pct: 80 },
+              { name: 'SQL', count: 398, pct: 75 },
+              { name: 'Pandas', count: 291, pct: 55 },
+              { name: 'Statistics', count: 265, pct: 50 },
+              { name: 'Machine Learning', count: 238, pct: 45 },
+              { name: 'BigQuery', count: 185, pct: 35 },
+              { name: 'Spark', count: 159, pct: 30 },
+              { name: 'TensorFlow', count: 159, pct: 30 },
+              { name: 'Power BI', count: 132, pct: 25 },
+              { name: 'PyTorch', count: 132, pct: 25 },
+              { name: 'Tableau', count: 106, pct: 20 },
+              { name: 'Airflow', count: 106, pct: 20 },
+              { name: 'dbt', count: 79, pct: 15 },
+            ],
+          },
+          devops: {
+            total: 410,
+            remote_pct: 66,
+            seniority: { junior: 8, mid: 45, senior: 47 },
+            skills: [
+              { name: 'Docker', count: 348, pct: 85 },
+              { name: 'CI/CD', count: 328, pct: 80 },
+              { name: 'Linux', count: 307, pct: 75 },
+              { name: 'Kubernetes', count: 287, pct: 70 },
+              { name: 'AWS', count: 307, pct: 75 },
+              { name: 'Terraform', count: 225, pct: 55 },
+              { name: 'Azure', count: 164, pct: 40 },
+              { name: 'Jenkins', count: 184, pct: 45 },
+              { name: 'Ansible', count: 164, pct: 40 },
+              { name: 'Python', count: 143, pct: 35 },
+              { name: 'GCP', count: 123, pct: 30 },
+              { name: 'Helm', count: 102, pct: 25 },
+              { name: 'GitOps', count: 82, pct: 20 },
+            ],
+          },
+          testing: {
+            total: 340,
+            remote_pct: 54,
+            seniority: { junior: 28, mid: 50, senior: 22 },
+            skills: [
+              { name: 'Manual Testing', count: 255, pct: 75 },
+              { name: 'Agile/Scrum', count: 238, pct: 70 },
+              { name: 'JIRA', count: 221, pct: 65 },
+              { name: 'Selenium', count: 204, pct: 60 },
+              { name: 'Postman', count: 187, pct: 55 },
+              { name: 'REST API', count: 187, pct: 55 },
+              { name: 'Python', count: 170, pct: 50 },
+              { name: 'SQL', count: 136, pct: 40 },
+              { name: 'Java', count: 136, pct: 40 },
+              { name: 'Cypress', count: 119, pct: 35 },
+              { name: 'TestNG', count: 85, pct: 25 },
+              { name: 'Playwright', count: 102, pct: 30 },
+              { name: 'BDD', count: 68, pct: 20 },
+            ],
+          },
+          ai: {
+            total: 290,
+            remote_pct: 70,
+            seniority: { junior: 5, mid: 40, senior: 55 },
+            skills: [
+              { name: 'Python', count: 261, pct: 90 },
+              { name: 'Machine Learning', count: 232, pct: 80 },
+              { name: 'LLM / Prompt Eng.', count: 203, pct: 70 },
+              { name: 'PyTorch', count: 174, pct: 60 },
+              { name: 'TensorFlow', count: 145, pct: 50 },
+              { name: 'NLP', count: 145, pct: 50 },
+              { name: 'Statistics', count: 116, pct: 40 },
+              { name: 'OpenAI API', count: 116, pct: 40 },
+              { name: 'RAG', count: 87, pct: 30 },
+              { name: 'SQL', count: 87, pct: 30 },
+              { name: 'MLOps', count: 87, pct: 30 },
+              { name: 'Hugging Face', count: 58, pct: 20 },
+              { name: 'LangChain', count: 58, pct: 20 },
+            ],
+          },
+        }
+
+        const result = DATA[category] ?? DATA['backend']
+        return json(res, { category, ...result, source: 'mock', cached_at: new Date().toISOString() })
+      })
+
+      // /api/jobs — list, get, patch, delete, reparse, interview
       server.middlewares.use('/api/jobs', async (req, res) => {
-        const idMatch     = req.url?.match(/^\/(\d+)\/?$/)
-        const reparseMatch = req.url?.match(/^\/(\d+)\/reparse\/?$/)
+        const idMatch        = req.url?.match(/^\/(\d+)\/?$/)
+        const reparseMatch   = req.url?.match(/^\/(\d+)\/reparse\/?$/)
+        const interviewMatch = req.url?.match(/^\/(\d+)\/interview\/?$/)
+
+        // GET /api/jobs/:id/interview
+        if (req.method === 'GET' && interviewMatch) {
+          const id  = parseInt(interviewMatch[1])
+          const job = jobs.find(j => j.id === id)
+          if (!job) return json(res, { detail: 'Not found' }, 404)
+          const mockQuestions = [
+            { id: 1, skill: 'JavaScript', question: 'What is the difference between `==` and `===`?', answer: '`==` coerces types before comparing; `===` checks both value and type. Always prefer `===`.', category: 'basics', difficulty: 'easy' },
+            { id: 2, skill: 'JavaScript', question: 'Explain event loop and microtasks vs macrotasks.', answer: 'Microtasks (Promise callbacks) run after the current task and before the next macrotask (setTimeout, I/O). The event loop processes one macrotask, then drains the microtask queue.', category: 'concurrency', difficulty: 'hard' },
+            { id: 3, skill: 'React',      question: 'What is the difference between controlled and uncontrolled components?', answer: 'Controlled: React state drives the value (value + onChange). Uncontrolled: the DOM manages its own state, accessed via refs.', category: 'basics', difficulty: 'easy' },
+            { id: 4, skill: 'React',      question: 'When would you use useCallback and useMemo?', answer: 'useCallback memoises a function reference to prevent child re-renders. useMemo memoises an expensive computed value. Use only when profiling shows a real issue.', category: 'performance', difficulty: 'medium' },
+            { id: 5, skill: 'Git',        question: 'What is the difference between `git merge` and `git rebase`?', answer: 'Merge preserves history with a merge commit. Rebase replays commits on top of another branch for a linear history. Never rebase shared branches.', category: 'workflow', difficulty: 'medium' },
+          ]
+          return json(res, {
+            session_id: 1,
+            job_title:  job.title  || 'Mock Job',
+            company:    job.company || 'Mock Company',
+            seniority:  job.seniority || '',
+            total:      mockQuestions.length,
+            questions:  mockQuestions,
+          })
+        }
 
         // GET /api/jobs
-        if (!idMatch && !reparseMatch) {
+        if (!idMatch && !reparseMatch && !interviewMatch) {
           if (req.method !== 'GET') return json(res, { error: 'Method not allowed' }, 405)
           return json(res, jobs)
         }
